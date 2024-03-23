@@ -1,0 +1,14 @@
+*.dwarf
+*.o
+*.out
+*.zip
+main
+multi
+log*.txt
+out.txt
+vis.html
+result/
+tools/
+in/
+input/
+out/
