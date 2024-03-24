@@ -244,7 +244,7 @@ struct Solver {
         }
         if (turn > 0 && col == 1) continue;
         double max_ratio = rnd.next(40.0) + 10.0;
-        double amp = rnd.next(0.7) + 1.4;
+        double amp = rnd.next(1.0) + 1.0;
         debug("col:%d max_ratio:%f amp:%f\n", col, max_ratio, amp);
         vector<double> ws = {1.0};
         for (int i = 1; i < col; ++i) {
