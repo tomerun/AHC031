@@ -213,7 +213,7 @@ struct Result {
 
 Result RESULT_EMPTY(vector<vector<Rect>>(), 1 << 29, 1 << 29);
 
-constexpr int64_t INF = 1ll << 60;
+constexpr int INF = 1 << 30;
 constexpr array<int, 4> DY = {1, 0, -1, 0};
 constexpr array<int, 4> DX = {0, 1, 0, -1};
 constexpr int W = 1000;
@@ -271,9 +271,9 @@ struct Solver {
         if (res.score() < best_result.score()) {
           best_result = res;
         }
+        // return best_result;
       }
       turn++;
-      // break;
     }
     return best_result;
   }
@@ -311,31 +311,138 @@ struct Solver {
     for (int i = 0; i < col; ++i) {
       debug("%d %.1f\n", nis[i + 1], 1.0 * (acc[nis[i + 1]] - acc[nis[i]]) / (xs[i + 1] - xs[i]));
     }
-    vvi seps(col);
+    int64_t pena = 0;
+    vvvi seps(D, vvi(col));
     for (int i = 0; i < col; ++i) {
       if (nis[i] == nis[i + 1]) return RESULT_EMPTY;
-      seps[i] = place_separator(vi(A[0].begin() + nis[i], A[0].begin() + nis[i + 1]));
-    }
-
-    vector<Rect> rects;
-    for (int i = 0; i < col; ++i) {
+      seps[0][i] = place_separator(vi(A[0].begin() + nis[i], A[0].begin() + nis[i + 1]));
       for (int j = nis[i]; j < nis[i + 1]; ++j) {
-        int top = seps[i][j - nis[i]];
-        int bottom = seps[i][j + 1 - nis[i]];
-        rects.emplace_back(Rect{top, xs[i], bottom, xs[i + 1]});
-      }
-    }
-    int64_t area_cost = 0;
-    for (int i = 0; i < N; ++i) {
-      int a = (rects[i].bottom - rects[i].top) * (rects[i].right - rects[i].left);
-      for (int j = 0; j < D; ++j) {
-        if (a < A[j][i]) {
-          area_cost += 100 * (A[j][i] - a);
+        int area = (seps[0][i][j - nis[i] + 1] - seps[0][i][j - nis[i]]) * (xs[i + 1] - xs[i]);
+        if (area < A[0][j]) {
+          pena += (A[0][j] - area) * 100;
         }
       }
     }
+    debug("pena_first_day:%lld\n", pena);
 
-    return Result(vector<vector<Rect>>(D, rects), area_cost, 0ll);
+    for (int i = 1; i < D; ++i) {
+      auto res = solve_single_day(i, seps[i - 1], xs);
+      if (res.second == INF) {
+        return RESULT_EMPTY;
+      }
+      seps[i] = res.first;
+      pena += res.second;
+    }
+
+    int64_t area_cost = 0;
+    vector<vector<Rect>> rects(D);
+    for (int day = 0; day < D; ++day) {
+      int ai = 0;
+      for (int c = 0; c < col; ++c) {
+        int left = xs[c];
+        int right = xs[c + 1];
+        for (int i = 0; i < seps[day][c].size() - 1; ++i) {
+          int top = seps[day][c][i];
+          int bottom = seps[day][c][i + 1];
+          rects[day].emplace_back(top, left, bottom, right);
+          int a = (bottom - top) * (right - left);
+          if (a < A[day][ai]) {
+            area_cost += (A[day][ai] - a) * 100;
+          }
+          ai++;
+        }
+      }
+    }
+    return Result(rects, area_cost, pena - area_cost);
+  }
+
+  pair<vvi, int> solve_single_day(int day, const vvi& prev_sep, const vi& xs) {
+    debug("solve_single_day:%d\n", day);
+    constexpr int FAIL = 10000000;
+    const int col = prev_sep.size();
+    vector<vvi> dp(col, vvi(N + 1, vi(W + 1, INF)));
+    vector<vvi> prev(col, vvi(N + 1, vi(W + 1, -1)));
+    dp[0][0][0] = 0;
+    static vi bottom_sep(W + 1);
+    static vi top_sep(W + 1);
+    static vi sep_idx(W + 1);
+    for (int c = 0; c < col; ++c) {
+      // debug("c:%d\n", c);
+      for (int i = 1; i < prev_sep[c].size(); ++i) {
+        fill(bottom_sep.begin() + prev_sep[c][i - 1] + 1, bottom_sep.begin() + prev_sep[c][i] + 1, prev_sep[c][i]);
+        fill(top_sep.begin() + prev_sep[c][i - 1], top_sep.begin() + prev_sep[c][i], prev_sep[c][i - 1]);
+        fill(sep_idx.begin() + prev_sep[c][i - 1], sep_idx.begin() + prev_sep[c][i], i - 1);
+      }
+      bottom_sep[0] = 0;
+      top_sep[W] = W;
+      sep_idx[W] = prev_sep[c].size() - 1;
+      const int width = xs[c + 1] - xs[c];
+      auto update = [&](int i, int y, int bottom) {
+        // debug("update:%d %d %d %d\n", i, y, bottom, dp[c][i][y]);
+        int nv = dp[c][i][y];
+        const bool on_sep = bottom_sep[bottom] == bottom;
+        if (!on_sep) nv += width;
+        int over = sep_idx[bottom] - sep_idx[y] - on_sep;
+        if (over > 0) nv += over * width;
+        if ((bottom - y) * width < A[day][i]) {
+          nv += (A[day][i] - (bottom - y) * width) * 100;
+        }
+        if (nv < dp[c][i + 1][bottom]) {
+          // debug("up:%d -> %d\n", dp[c][i + 1][bottom], nv);
+          dp[c][i + 1][bottom] = nv;
+          prev[c][i + 1][bottom] = y;
+        }
+      };
+      for (int i = 0; i < N; ++i) {
+        int h = (A[day][i] + width - 1) / width;
+        // debug("i:%d h:%d\n", i, h);
+        for (int y = 0; y < W; ++y) {
+          if (dp[c][i][y] > FAIL) continue;
+          // ぴったり
+          if (y + h < W) {
+            update(i, y, y + h);
+          }
+          // ぴったり-1
+          if (h > 1 && y + h - 1 < W) {
+            update(i, y, y + h - 1);
+          }
+          // 前の線
+          if (y + h < W && top_sep[y + h] != y + h && y < top_sep[y + h]) {
+            update(i, y, top_sep[y + h]);
+          }
+          // 次の線
+          if (y + h < W && bottom_sep[y + h] != y + h && bottom_sep[y + h] != W) {
+            update(i, y, bottom_sep[y + h]);
+          }
+          // 最後
+          update(i, y, W);
+        }
+      }
+      if (c < col - 1) {
+        for (int i = 0; i < N; ++i) {
+          dp[c + 1][i][0] = dp[c][i][W];
+        }
+      }
+    }
+    debug("dp_value:%d\n", dp[col - 1][N][W]);
+    if (dp[col - 1][N][W] > FAIL) {
+      debugStr("fail\n");
+      return make_pair(vvi(), INF);
+    }
+    vvi ret(col);
+    int n = N;
+    for (int c = col - 1; c >= 0; --c) {
+      ret[c].push_back(W);
+      int y = W;
+      while (y > 0) {
+        y = prev[c][n][y];
+        --n;
+        ret[c].push_back(y);
+      }
+      reverse(ret[c].begin(), ret[c].end());
+    }
+    assert(n == 0);
+    return make_pair(ret, dp[col - 1][N][W]);
   }
 
   vi place_separator(const vi& areas) {
