@@ -233,17 +233,132 @@ struct Solver {
   Solver(ll timelimit_) : timelimit(timelimit_) {}
 
   Result solve() {
-    int64_t pena_area = 0;
-    vector<Rect> rs;
-    for (int i = 0; i < N; ++i) {
-      rs.emplace_back(i, 0, i + 1, W);
+    Result best_result = RESULT_EMPTY;
+    int turn = 0;
+    int max_col = ceil(sqrt(D) * 1.5);
+    while (true) {
+      for (int col = 1; col <= max_col; ++col) {
+        if (timelimit < get_time()) {
+          debug("turn:%d\n", turn * max_col + col - 1);
+          return best_result;
+        }
+        if (turn > 0 && col == 1) continue;
+        double max_ratio = rnd.next(40.0) + 10.0;
+        double amp = rnd.next(0.7) + 1.4;
+        debug("col:%d max_ratio:%f amp:%f\n", col, max_ratio, amp);
+        vector<double> ws = {1.0};
+        for (int i = 1; i < col; ++i) {
+          ws.push_back(min(max_ratio, ws.back() * amp));
+        }
+        double sum = accumulate(ws.begin(), ws.end(), 0.0);
+        for (int i = 0; i < col; ++i) {
+          ws[i] = floor(ws[i] * W / sum);
+        }
+        sum = accumulate(ws.begin(), ws.end(), 0.0);
+        for (int i = 0; sum < W; ++i) {
+          ws[col - 1 - i % col] += 1;
+          sum += 1;
+        }
+        vi xs = {0};
+        for (int i = 0; i < col; ++i) {
+          xs.push_back(xs.back() + (int)ws[i]);
+        }
+        debugStr("xs:");
+        debug_vec(xs);
+        debugln();
+        Result res = solve_cols(xs);
+        debug("score:%lld cols:%d\n", res.score(), col);
+        if (res.score() < best_result.score()) {
+          best_result = res;
+        }
+      }
+      turn++;
+      // break;
     }
-    for (int i = 0; i < D; ++i) {
-      for (int j = 0; j < N; ++j) {
-        pena_area += max(0, A[i][j] - W) * 100;
+    return best_result;
+  }
+
+  Result solve_cols(const vi& xs) {
+    const int col = xs.size() - 1;
+    vector<vector<double>> dp(col, vector<double>(N + 1, 1e99));
+    vector<vector<int>> prev(col, vector<int>(N + 1, 1 << 29));
+    vector<int64_t> acc(N + 1, 0);
+    for (int i = 0; i < N; ++i) {
+      acc[i + 1] = acc[i] + A[0][i];
+    }
+    for (int i = 0; i <= N; ++i) {
+      double h = acc[i] / xs[1];
+      dp[0][i] = (h <= W ? h : W + pow(50 * (h - W), 2));
+    }
+    for (int i = 1; i < col; ++i) {
+      for (int j = 0; j <= N; ++j) {
+        for (int k = 0; k <= j; ++k) {
+          double h = 1.0 * (acc[j] - acc[k]) / (xs[i + 1] - xs[i]);
+          double nv = dp[i - 1][k] + (h <= W ? h : W + pow(50 * (h - W), 2));
+          if (nv < dp[i][j]) {
+            dp[i][j] = nv;
+            prev[i][j] = k;
+          }
+        }
       }
     }
-    return Result(vector<vector<Rect>>(D, rs), pena_area, 0);
+    vi nis = {N};
+    for (int i = col - 1; i > 0; --i) {
+      nis.push_back(prev[i][nis.back()]);
+    }
+    nis.push_back(0);
+    reverse(nis.begin(), nis.end());
+    for (int i = 0; i < col; ++i) {
+      debug("%d %.1f\n", nis[i + 1], 1.0 * (acc[nis[i + 1]] - acc[nis[i]]) / (xs[i + 1] - xs[i]));
+    }
+    vvi seps(col);
+    for (int i = 0; i < col; ++i) {
+      if (nis[i] == nis[i + 1]) return RESULT_EMPTY;
+      seps[i] = place_separator(vi(A[0].begin() + nis[i], A[0].begin() + nis[i + 1]));
+    }
+
+    vector<Rect> rects;
+    for (int i = 0; i < col; ++i) {
+      for (int j = nis[i]; j < nis[i + 1]; ++j) {
+        int top = seps[i][j - nis[i]];
+        int bottom = seps[i][j + 1 - nis[i]];
+        rects.emplace_back(Rect{top, xs[i], bottom, xs[i + 1]});
+      }
+    }
+    int64_t area_cost = 0;
+    for (int i = 0; i < N; ++i) {
+      int a = (rects[i].bottom - rects[i].top) * (rects[i].right - rects[i].left);
+      for (int j = 0; j < D; ++j) {
+        if (a < A[j][i]) {
+          area_cost += 100 * (A[j][i] - a);
+        }
+      }
+    }
+
+    return Result(vector<vector<Rect>>(D, rects), area_cost, 0ll);
+  }
+
+  vi place_separator(const vi& areas) {
+    int sum = accumulate(areas.begin(), areas.end(), 0);
+    vi ret = {0};
+    int left = W;
+    for (int a : areas) {
+      ret.push_back(max(1, a * W / sum));
+      left -= ret.back();
+    }
+    for (int i = 0; left > 0; ++i) {
+      ret[areas.size() - i % areas.size()]++;
+      left--;
+    }
+    for (int i = 0; left < 0; ++i) {
+      if (ret[areas.size() - i % areas.size()] == 1) continue;
+      ret[areas.size() - i % areas.size()]--;
+      left++;
+    }
+    for (int i = 1; i < ret.size(); ++i) {
+      ret[i] += ret[i - 1];
+    }
+    return ret;
   }
 };
 
@@ -263,15 +378,15 @@ int main() {
       scanf("%d", &A[i][j]);
     }
   }
-  printf("%d %d\n", D, N);
-  // auto solver = make_unique<Solver>(start_time + tl);
-  // Result res = solver->solve();
-  // for (int i = 0; i < D; ++i) {
-  //   for (int j = 0; j < N; ++j) {
-  //     printf("%d %d %d %d\n", res.rects[i][j].top, res.rects[i][j].left, res.rects[i][j].bottom, res.rects[i][j].right);
-  //   }
-  // }
-  // debug("score:%lld pena_area:%lld pena_wall:%lld\n", res.score(), res.pena_area, res.pena_wall);
-  // PRINT_TIMER();
-  // PRINT_COUNTER();
+  debug("D:%d N:%d\n", D, N);
+  auto solver = make_unique<Solver>(start_time + tl);
+  Result res = solver->solve();
+  for (int i = 0; i < D; ++i) {
+    for (int j = 0; j < N; ++j) {
+      printf("%d %d %d %d\n", res.rects[i][j].top, res.rects[i][j].left, res.rects[i][j].bottom, res.rects[i][j].right);
+    }
+  }
+  debug("score:%lld pena_area:%lld pena_wall:%lld\n", res.score(), res.pena_area, res.pena_wall);
+  PRINT_TIMER();
+  PRINT_COUNTER();
 }
