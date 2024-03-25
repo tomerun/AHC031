@@ -228,8 +228,9 @@ bool accept(int64_t diff, double cooler) {
 
 struct Solver {
   const ll timelimit;
+  int64_t best_score;
 
-  Solver(ll timelimit_) : timelimit(timelimit_) {}
+  Solver(ll timelimit_) : timelimit(timelimit_), best_score(INF) {}
 
   Result solve() {
     Result best_result = RESULT_EMPTY;
@@ -244,7 +245,6 @@ struct Solver {
         if (turn > 0 && col == 1) continue;
         double max_ratio = rnd.next(40.0) + 10.0;
         double amp = rnd.next(1.0) + 1.0;
-        debug("col:%d max_ratio:%f amp:%f\n", col, max_ratio, amp);
         vector<double> ws = {1.0};
         for (int i = 1; i < col; ++i) {
           ws.push_back(min(max_ratio, ws.back() * amp));
@@ -265,10 +265,11 @@ struct Solver {
         debugStr("xs:");
         debug_vec(xs);
         debugln();
-        Result res = solve_cols(xs, best_result.score());
-        debug("score:%lld cols:%d\n", res.score(), col);
+        Result res = solve_cols(xs);
+        debug("score:%lld col:%d max_ratio:%f amp:%f\n", res.score(), col, max_ratio, amp);
         if (res.score() < best_result.score()) {
           best_result = res;
+          best_score = res.score();
         }
         // return best_result;
       }
@@ -277,7 +278,7 @@ struct Solver {
     return best_result;
   }
 
-  Result solve_cols(const vi& xs, int64_t best_score) {
+  Result solve_cols(const vi& xs) {
     const int col = xs.size() - 1;
     vector<vector<double>> dp(col, vector<double>(N + 1, 1e99));
     vector<vector<int>> prev(col, vector<int>(N + 1, 1 << 29));
@@ -287,13 +288,13 @@ struct Solver {
     }
     for (int i = 0; i <= N; ++i) {
       double h = acc[i] / xs[1];
-      dp[0][i] = (h <= W ? h : W + pow(50 * (h - W), 2));
+      dp[0][i] = (h <= W ? W - h : W + pow(50 * (h - W), 2));
     }
     for (int i = 1; i < col; ++i) {
       for (int j = 0; j <= N; ++j) {
         for (int k = 0; k <= j; ++k) {
           double h = 1.0 * (acc[j] - acc[k]) / (xs[i + 1] - xs[i]);
-          double nv = dp[i - 1][k] + (h <= W ? h : W + pow(50 * (h - W), 2));
+          double nv = dp[i - 1][k] + (h <= W ? W - h : W + pow(50 * (h - W), 2));
           if (nv < dp[i][j]) {
             dp[i][j] = nv;
             prev[i][j] = k;
@@ -390,7 +391,7 @@ struct Solver {
 
   pair<vvi, int> solve_single_day(int day, const vvi& prev_sep, const vi& xs) {
     // debug("solve_single_day:%d\n", day);
-    constexpr int FAIL = 10000000;
+    const int FAIL = (int)min(10000000ll, best_score);
     const int col = prev_sep.size();
     vector<vvi> dp(col, vvi(N + 1, vi(W + 1, INF)));
     vector<vvi> prev(col, vvi(N + 1, vi(W + 1, -1)));
@@ -429,7 +430,7 @@ struct Solver {
         int h = (A[day][i] + width - 1) / width;
         // debug("i:%d h:%d\n", i, h);
         for (int y = 0; y < W; ++y) {
-          if (dp[c][i][y] > FAIL) continue;
+          if (dp[c][i][y] >= FAIL) continue;
           // ぴったり
           if (y + h < W) {
             update(i, y, y + h);
@@ -457,7 +458,7 @@ struct Solver {
       }
     }
     // debug("dp_value:%d\n", dp[col - 1][N][W]);
-    if (dp[col - 1][N][W] > FAIL) {
+    if (dp[col - 1][N][W] >= FAIL) {
       debugStr("fail\n");
       return make_pair(vvi(), INF);
     }
