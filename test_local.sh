@@ -6,6 +6,6 @@ END=$2
 for (( i = $START; i <= $END; i++ )); do
 	seed=$(printf "%04d" $i)
 	echo "seed:${seed}" 1>&2
-	./main < in/"$seed".txt > out/"$seed".txt
-	tools/target/release/vis in/"$seed".txt out/"$seed".txt
+	./main < tools/in/"$seed".txt 2>&1 > out/"$seed".txt | tail -n 1
+	tools/target/release/vis tools/in/"$seed".txt out/"$seed".txt
 done
