@@ -1,13 +1,13 @@
 require "option_parser"
 
 struct Result
-  getter :seed, :score
+  getter :seed, :score, :pena_area, :pena_wall
 
-  def initialize(@seed : Int32, @score : Int64)
+  def initialize(@seed : Int32, @score : Int64, @pena_area : Int64, @pena_wall : Int64)
   end
 end
 
-NULL_RESULT = Result.new(0, -1i64)
+NULL_RESULT = Result.new(0, -1i64, -1i64, -1i64)
 SEED_BASE   = 1000
 num_test = 1000
 num_worker = 8
@@ -40,8 +40,8 @@ num_worker.times do |i|
         Process.run("./main", input: f, output: output, error: error)
       end
       error.rewind
-      m = error.gets_to_end.scan(/score:(\d+)/).last
-      ch.send(Result.new(j + SEED_BASE, m[1].to_i64))
+      m = error.gets_to_end.scan(/score: *(\d+) pena_area: *(\d+) pena_wall: *(\d+)/).last
+      ch.send(Result.new(j + SEED_BASE, m[1].to_i64, m[2].to_i64, m[3].to_i64))
       # output.rewind
       # File.open("output/#{seed}.txt", "w") do |f|
       #   f << output.gets_to_end
@@ -56,7 +56,7 @@ num_test.times do |i|
   res = ch.receive
   results[res.seed - SEED_BASE] = res
   while ri < results.size && results[ri].score != -1
-    printf "seed:%04d score:%d\n", ri + SEED_BASE, results[ri].score
+    printf "seed:%04d score:%9d area:%9d wall:%9d\n", ri + SEED_BASE, results[ri].score, results[ri].pena_area, results[ri].pena_wall
     ri += 1
   end
 end

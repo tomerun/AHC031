@@ -198,6 +198,7 @@ struct Point {
 
 struct Rect {
   int top, left, bottom, right;
+  int area() const { return (bottom - top) * (right - left); }
 };
 
 struct Result {
@@ -334,6 +335,8 @@ struct Solver {
       pena += res.second;
     }
 
+    debug("pena:%lld\n", pena);
+    int64_t wall_cost = pena;
     int64_t area_cost = 0;
     vector<vector<Rect>> rects(D);
     for (int day = 0; day < D; ++day) {
@@ -347,13 +350,19 @@ struct Solver {
           rects[day].emplace_back(top, left, bottom, right);
           int a = (bottom - top) * (right - left);
           if (a < A[day][ai]) {
-            area_cost += (A[day][ai] - a) * 100;
+            wall_cost -= (A[day][ai] - a) * 100;
           }
           ai++;
         }
       }
+      sort(rects[day].begin(), rects[day].end(), [](const Rect& r1, const Rect& r2) { return r1.area() < r2.area(); });
+      for (int i = 0; i < N; ++i) {
+        if (rects[day][i].area() < A[day][i]) {
+          area_cost += (A[day][i] - rects[day][i].area()) * 100;
+        }
+      }
     }
-    return Result(rects, area_cost, pena - area_cost);
+    return Result(rects, area_cost, wall_cost);
   }
 
   pair<vvi, int> solve_single_day(int day, const vvi& prev_sep, const vi& xs) {
@@ -493,7 +502,7 @@ int main() {
       printf("%d %d %d %d\n", res.rects[i][j].top, res.rects[i][j].left, res.rects[i][j].bottom, res.rects[i][j].right);
     }
   }
-  debug("score:%lld pena_area:%lld pena_wall:%lld\n", res.score(), res.pena_area, res.pena_wall);
+  debug("score:%8lld pena_area:%8lld pena_wall:%8lld\n", res.score(), res.pena_area, res.pena_wall);
   PRINT_TIMER();
   PRINT_COUNTER();
 }
