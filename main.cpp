@@ -215,8 +215,6 @@ struct Result {
 Result RESULT_EMPTY(vector<vector<Rect>>(), 1 << 29, 1 << 29);
 
 constexpr int INF = 1 << 30;
-constexpr array<int, 4> DY = {1, 0, -1, 0};
-constexpr array<int, 4> DX = {0, 1, 0, -1};
 constexpr int W = 1000;
 int D;
 int N;
@@ -267,7 +265,7 @@ struct Solver {
         debugStr("xs:");
         debug_vec(xs);
         debugln();
-        Result res = solve_cols(xs);
+        Result res = solve_cols(xs, best_result.score());
         debug("score:%lld cols:%d\n", res.score(), col);
         if (res.score() < best_result.score()) {
           best_result = res;
@@ -279,7 +277,7 @@ struct Solver {
     return best_result;
   }
 
-  Result solve_cols(const vi& xs) {
+  Result solve_cols(const vi& xs, int64_t best_score) {
     const int col = xs.size() - 1;
     vector<vector<double>> dp(col, vector<double>(N + 1, 1e99));
     vector<vector<int>> prev(col, vector<int>(N + 1, 1 << 29));
@@ -312,31 +310,41 @@ struct Solver {
     for (int i = 0; i < col; ++i) {
       debug("%d %.1f\n", nis[i + 1], 1.0 * (acc[nis[i + 1]] - acc[nis[i]]) / (xs[i + 1] - xs[i]));
     }
-    int64_t pena = 0;
+    vector<int64_t> penas(D);
     vvvi seps(D, vvi(col));
     for (int i = 0; i < col; ++i) {
       if (nis[i] == nis[i + 1]) return RESULT_EMPTY;
       seps[0][i] = place_separator(vi(A[0].begin() + nis[i], A[0].begin() + nis[i + 1]));
-      for (int j = nis[i]; j < nis[i + 1]; ++j) {
-        int area = (seps[0][i][j - nis[i] + 1] - seps[0][i][j - nis[i]]) * (xs[i + 1] - xs[i]);
-        if (area < A[0][j]) {
-          pena += (A[0][j] - area) * 100;
-        }
-      }
     }
-    debug("pena_first_day:%lld\n", pena);
-
+    penas[0] = initial_day_area_pena(seps[0], xs);
     for (int i = 1; i < D; ++i) {
       auto res = solve_single_day(i, seps[i - 1], xs);
       if (res.second == INF) {
         return RESULT_EMPTY;
       }
       seps[i] = res.first;
-      pena += res.second;
+      penas[i] = res.second;
+    }
+    debug("sum_pena:%lld\n", accumulate(penas.begin(), penas.end(), 0LL));
+    if (accumulate(penas.begin(), penas.end(), 0LL) < best_score * 3) {
+      for (int t = 0; t < 2; ++t) {
+        reverse(seps.begin(), seps.end());
+        reverse(penas.begin(), penas.end());
+        reverse(A.begin(), A.begin() + D);
+        penas[0] = initial_day_area_pena(seps[0], xs);
+        for (int i = 1; i < D; ++i) {
+          auto res = solve_single_day(i, seps[i - 1], xs);
+          if (res.second == INF) {
+            return RESULT_EMPTY;
+          }
+          seps[i] = res.first;
+          penas[i] = res.second;
+        }
+        debug("sum_pena:%lld\n", accumulate(penas.begin(), penas.end(), 0LL));
+      }
     }
 
-    debug("pena:%lld\n", pena);
-    int64_t wall_cost = pena;
+    int64_t wall_cost = accumulate(penas.begin(), penas.end(), 0LL);
     int64_t area_cost = 0;
     vector<vector<Rect>> rects(D);
     for (int day = 0; day < D; ++day) {
@@ -365,8 +373,23 @@ struct Solver {
     return Result(rects, area_cost, wall_cost);
   }
 
+  int64_t initial_day_area_pena(const vvi& sep, const vi& xs) {
+    int64_t pena = 0;
+    int ai = 0;
+    for (int i = 0; i < sep.size(); ++i) {
+      for (int j = 0; j < sep[i].size() - 1; ++j) {
+        int area = (sep[i][j + 1] - sep[i][j]) * (xs[i + 1] - xs[i]);
+        if (area < A[0][ai]) {
+          pena += (A[0][ai] - area) * 100;
+        }
+        ai++;
+      }
+    }
+    return pena;
+  }
+
   pair<vvi, int> solve_single_day(int day, const vvi& prev_sep, const vi& xs) {
-    debug("solve_single_day:%d\n", day);
+    // debug("solve_single_day:%d\n", day);
     constexpr int FAIL = 10000000;
     const int col = prev_sep.size();
     vector<vvi> dp(col, vvi(N + 1, vi(W + 1, INF)));
@@ -433,7 +456,7 @@ struct Solver {
         }
       }
     }
-    debug("dp_value:%d\n", dp[col - 1][N][W]);
+    // debug("dp_value:%d\n", dp[col - 1][N][W]);
     if (dp[col - 1][N][W] > FAIL) {
       debugStr("fail\n");
       return make_pair(vvi(), INF);
