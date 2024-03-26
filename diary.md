@@ -69,18 +69,49 @@ seed:0009 score:6928 pena_area:0 pena_wall:6927
 ## 2024-03-25
 
 とりあえず最後に各部屋をサイズ順に割り当て直すのをやっておく。  
-1%くらいは意味あったけどこれアルゴリズムが甘いからだよねえ
+1%くらいは意味あったけどこれ本体のアルゴリズムが甘いからだよねえ
 
 
 ```
-seed:0000 score:4287 pena_area:0 pena_wall:4286
-seed:0001 score:3058701 pena_area:1624700 pena_wall:1434000
-seed:0002 score:456701 pena_area:50700 pena_wall:406000
-seed:0003 score:87224 pena_area:0 pena_wall:87223
-seed:0004 score:421469 pena_area:244500 pena_wall:176968
-seed:0005 score:78385 pena_area:5000 pena_wall:73384
-seed:0006 score:26729 pena_area:300 pena_wall:26428
-seed:0007 score:28937 pena_area:0 pena_wall:28936
-seed:0008 score:176785 pena_area:0 pena_wall:176784
-seed:0009 score:6928 pena_area:0 pena_wall:6927
+seed:0000 score:    4287 pena_area:       0 pena_wall:    4286
+seed:0001 score: 3058701 pena_area: 1624700 pena_wall: 1434000
+seed:0002 score:  456701 pena_area:   50700 pena_wall:  406000
+seed:0003 score:   87224 pena_area:       0 pena_wall:   87223
+seed:0004 score:  421469 pena_area:  244500 pena_wall:  176968
+seed:0005 score:   78385 pena_area:    5000 pena_wall:   73384
+seed:0006 score:   26729 pena_area:     300 pena_wall:   26428
+seed:0007 score:   28937 pena_area:       0 pena_wall:   28936
+seed:0008 score:  176785 pena_area:       0 pena_wall:  176784
+seed:0009 score:    6928 pena_area:       0 pena_wall:    6927
 ```
+
+後ろ向きに反復するのすぐ書けそうだったので書いた。
+```
+seed:0000 score:    2975 pena_area:       0 pena_wall:    2974
+seed:0001 score: 2492901 pena_area: 1070900 pena_wall: 1422000
+seed:0002 score:  404001 pena_area:       0 pena_wall:  404000
+seed:0003 score:   85167 pena_area:       0 pena_wall:   85166
+seed:0004 score:  264917 pena_area:   86700 pena_wall:  178216
+seed:0005 score:   88315 pena_area:       0 pena_wall:   88314
+seed:0006 score:   16685 pena_area:       0 pena_wall:   16684
+seed:0007 score:   30137 pena_area:       0 pena_wall:   30136
+seed:0008 score:  179697 pena_area:       0 pena_wall:  179696
+seed:0009 score:    4371 pena_area:       0 pena_wall:    4370
+```
+
+まあこんなもんかというところ。悪くなってるのもあるのは遅くなった分だろう。
+
+
+## 2024-03-26
+
+完全解狙うのをとりあえず作っておく。  
+完全解じゃなく若干面積がはみ出る場合でも、壁動かさない解を初期解として作っておくのはありだろう。
+
+＝> ありだろうと書いたが全然ありじゃなかった。壁固定は完全解用にしかならんわ  
+まあでも1000ケース中完全解が可能な14ケースで全部スコア1を達成できてるのでこれはこれでよかろう。
+
+
+
+
+
+
