@@ -111,7 +111,41 @@ seed:0009 score:    4371 pena_area:       0 pena_wall:    4370
 まあでも1000ケース中完全解が可能な14ケースで全部スコア1を達成できてるのでこれはこれでよかろう。
 
 
+逆に壁の移動コストを無視して面積だけできるだけ合わせるようにした解を作ってみたら、空きが少ないケースでこれまでの解答よりもだいぶ良くなった。  
+壁を動かしまくる解法のコスト上界 `D*(N-1)*W*2` の3~4割のスコアになっていそう。  
+偶然壁が重なって移動コストにならない分を考慮した厳密なスコア計算はしてないが…
+
+こんな雑な解答でこれだけ出るのならまだまだ伸ばさないといけないということだよねえ
+
+現状（スコアは正確でなく真のスコアよりpena_wallが若干悪い）
+```
+seed:0000 score:    2210 pena_area:       0 pena_wall:    2209
+seed:0001 score:  472074 pena_area:       0 pena_wall:  472073
+seed:0002 score:  263698 pena_area:       0 pena_wall:  263697
+seed:0003 score:   92632 pena_area:    6400 pena_wall:   86231
+seed:0004 score:  160450 pena_area:       0 pena_wall:  160449
+seed:0005 score:   56586 pena_area:       0 pena_wall:   56585
+seed:0006 score:   14452 pena_area:       0 pena_wall:   14451
+seed:0007 score:   22592 pena_area:       0 pena_wall:   22591
+seed:0008 score:  175285 pena_area:     300 pena_wall:  174984
+seed:0009 score:    4364 pena_area:       0 pena_wall:    4363
+```
 
 
+## 2024-03-27
 
+完全にD日を独立にやるのではなく、縦の壁の位置は固定にするのも試してみた。
+これだけでも、空きが多いところ以外で全体的に2割くらい良くなった。これだけで良くなるということはまだまだ伸ばす余地がたくさんあるということだ
 
+```
+seed:0000 score:    2211 pena_area:       0 pena_wall:    2210
+seed:0001 score:  242974 pena_area:       0 pena_wall:  242973
+seed:0002 score:  133339 pena_area:       0 pena_wall:  133338
+seed:0003 score:   97026 pena_area:       0 pena_wall:   97025
+seed:0004 score:   67431 pena_area:       0 pena_wall:   67430
+seed:0005 score:   62871 pena_area:       0 pena_wall:   62870
+seed:0006 score:   14452 pena_area:       0 pena_wall:   14451
+seed:0007 score:   23009 pena_area:       0 pena_wall:   23008
+seed:0008 score:   94079 pena_area:       0 pena_wall:   94078
+seed:0009 score:    4371 pena_area:       0 pena_wall:    4370
+```
