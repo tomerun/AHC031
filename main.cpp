@@ -221,6 +221,7 @@ constexpr int INF = 1 << 29;
 constexpr int W = 1000;
 int D;
 int N;
+double E;
 array<array<int, 50>, 50> A;
 
 bool accept(int64_t diff, double cooler) {
@@ -329,16 +330,23 @@ struct Solver {
     const int n = areas.size();
     vi hs(col);
     vi ai(n);
-    for (int i = 0; i < n; ++i) {
-      hs[i % col] += (areas[i] + ws[i % col] - 1) / ws[i % col];
-      ai[i] = i % col;
+    for (int i = n - 1; i >= 0; --i) {
+      int pos = 0;
+      for (int j = 1; j < col; ++j) {
+        if (hs[j] < hs[pos] || (hs[j] == hs[pos] && ws[pos] < ws[j])) {
+          pos = j;
+        }
+      }
+      ai[i] = pos;
+      hs[pos] += (areas[i] + ws[pos] - 1) / ws[pos];
     }
     vi vs(col);
     for (int i = 0; i < col; ++i) {
       vs[i] = eval_height(hs[i]);
     }
     // nisを高さが均等になるように詰める
-    for (int i = 0; i < 1000; ++i) {
+    const int rep = (int)(5.0 / sqrt(E) * N);
+    for (int i = 0; i < rep; ++i) {
       int p0 = rnd.next(n);
       int from = ai[p0];
       if ((i & 3) == 0) {
@@ -603,7 +611,7 @@ struct Solver {
     int best_pena_area = INF;
     int best_pena_wall = INF;
     int best_col = 0;
-    for (int t = 0; t < max(10, 50000 / (D * N)); ++t) {
+    for (int t = 0; t < max(10, 100000 / (D * N)); ++t) {
       for (int col = 2; col <= clamp((int)sqrt(N * 3), 4, 7); ++col) {
         vector<double> ratio(col);
         for (int i = 0; i < col; ++i) {
@@ -613,7 +621,7 @@ struct Solver {
         int sum_pena_area = 0;
         int sum_pena_wall = 0;
         vector<vector<Rect>> rects(D);
-        for (int day = 0; day < D; ++day) {
+        for (int day = 0; day < D && sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall; ++day) {
           vvi nis = distribute_area(ws, vi(A[day].begin(), A[day].begin() + N));
           vvi hss;
           int pena_area = 0;
@@ -669,13 +677,15 @@ struct Solver {
             }
             x += ws[i];
           }
-          sort(rects[day].begin(), rects[day].end(), [](const Rect& r1, const Rect& r2) { return r1.area() < r2.area(); });
         }
         if (sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall) {
           best_pena_area = sum_pena_area;
           best_pena_wall = sum_pena_wall;
           best_col = col;
           best_rects = rects;
+          for (int day = 0; day < D; ++day) {
+            sort(best_rects[day].begin(), best_rects[day].end(), [](const Rect& r1, const Rect& r2) { return r1.area() < r2.area(); });
+          }
           debug("pena_area:%d pena_wall:%d col:%d t:%d\n", best_pena_area, best_pena_wall, best_col, t);
         }
       }
@@ -923,12 +933,15 @@ int main() {
 #endif
   int _;
   scanf("%d %d %d", &_, &D, &N);
+  int area_sum = 0;
   for (int i = 0; i < D; ++i) {
     for (int j = 0; j < N; ++j) {
       scanf("%d", &A[i][j]);
+      area_sum += A[i][j];
     }
   }
-  debug("D:%d N:%d\n", D, N);
+  E = 1.0 * (W * W * D - area_sum) / (W * W * D);
+  debug("D:%d N:%d E:%.4f\n", D, N, E);
   auto solver = make_unique<Solver>(start_time + tl);
   Result res = solver->solve();
   for (int i = 0; i < D; ++i) {
