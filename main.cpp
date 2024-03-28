@@ -249,12 +249,14 @@ struct Solver {
     debug("sum_max_area:%d\n", sum_max_area);
     if (sum_max_area <= W * W + 200) {
       START_TIMER(0);
+      // score=1 狙い
       best_result = solve_nomove(max_areas);
       STOP_TIMER(0);
       if (best_result.score() == 1) return best_result;
     }
 
     START_TIMER(1);
+    // 壁のことは無視して面積ペナルティのみを最小化しようとする解
     Result noarea_result = solve_noarea();
     STOP_TIMER(1);
     if (noarea_result.score() < best_result.score()) {
@@ -262,6 +264,7 @@ struct Solver {
       best_score = best_result.score();
     }
     START_TIMER(2);
+    // 縦の壁だけ固定して面積ペナルティを最小化しようとする解
     Result noarea2_result = solve_noarea_fixed_column();
     STOP_TIMER(2);
     if (noarea2_result.score() < best_result.score()) {
