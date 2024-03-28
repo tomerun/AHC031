@@ -187,23 +187,18 @@ template <class T> void shuffle(vector<T>& v) {
 
 //////// end of template ////////
 
-template <class T> using ar_t = array<array<T, 20>, 20>;
-
-ar_t<uint64_t> cell_hash;
-
-struct Point {
-  int y, x;
-
-  bool operator==(const Point& p) const { return y == p.y && x == p.x; }
-  bool operator!=(const Point& p) const { return y != p.y || x != p.x; }
-  bool operator<(const Point& p) const { return y == p.y ? x < p.x : y < p.y; }
-};
-
 struct Rect {
   int top, left, bottom, right;
   int area() const { return (bottom - top) * (right - left); }
 };
 bool operator<(const Rect& r1, const Rect& r2) { return r1.area() < r2.area(); }
+
+constexpr int INF = 1 << 29;
+constexpr int W = 1000;
+int D;
+int N;
+double E;
+array<array<int, 50>, 50> A;
 
 struct Result {
   vector<vector<Rect>> rects;
@@ -218,12 +213,40 @@ struct Result {
 
 Result RESULT_EMPTY(vector<vector<Rect>>(), 1 << 29, 1 << 29);
 
-constexpr int INF = 1 << 29;
-constexpr int W = 1000;
-int D;
-int N;
-double E;
-array<array<int, 50>, 50> A;
+struct FixColumnSolution {
+  vi ws;
+  vvvi nis;
+  vvvi hs;
+  int64_t pena_area;
+  int64_t pena_wall;
+  FixColumnSolution(const vi& ws_, const vvvi& nis_, const vvvi& hs_, int64_t pena_area_, int64_t pena_wall_)
+      : ws(ws_), nis(nis_), hs(hs_), pena_area(pena_area_), pena_wall(pena_wall_) {}
+
+  int64_t score() const { return pena_area + pena_wall + 1; }
+
+  Result to_result() const {
+    int64_t real_pena_area = 0;
+    vector<vector<Rect>> rects(D);
+    for (int i = 0; i < D; ++i) {
+      int x = 0;
+      for (int j = 0; j < ws.size(); ++j) {
+        int y = 0;
+        for (int k = 0; k < hs[i][j].size(); ++k) {
+          rects[i].emplace_back(y, x, y + hs[i][j][k], x + ws[j]);
+          y += hs[i][j][k];
+        }
+        x += ws[j];
+      }
+      sort(rects[i].begin(), rects[i].end());
+      for (int j = 0; j < N; ++j) {
+        if (rects[i][j].area() < A[i][j]) {
+          real_pena_area += (A[i][j] - rects[i][j].area()) * 100;
+        }
+      }
+    }
+    return Result(rects, real_pena_area, pena_wall);
+  }
+};
 
 bool accept(int64_t diff, double cooler) {
   if (diff <= 0) return true;
@@ -238,7 +261,7 @@ struct Solver {
   Solver(ll timelimit_) : timelimit(timelimit_), best_score(INF) {}
 
   Result solve() {
-    Result best_result = RESULT_EMPTY;
+    // score=1 狙い
     vi max_areas(N);
     for (int i = 0; i < N; ++i) {
       for (int j = 0; j < D; ++j) {
@@ -247,15 +270,16 @@ struct Solver {
     }
     int sum_max_area = accumulate(max_areas.begin(), max_areas.end(), 0);
     debug("sum_max_area:%d\n", sum_max_area);
-    if (sum_max_area <= W * W + 200) {
+    if (sum_max_area <= W * W) {
       START_TIMER(0);
-      // score=1 狙い
-      best_result = solve_nomove(max_areas);
+      Result result = solve_nomove(max_areas);
       STOP_TIMER(0);
-      if (best_result.score() == 1) return best_result;
+      if (result.score() == 1) return result;
     }
 
+    Result best_result = RESULT_EMPTY;
     START_TIMER(1);
+    // TODO:見込みがない場合はやらない
     // 壁のことは無視して面積ペナルティのみを最小化しようとする解
     Result noarea_result = solve_noarea();
     STOP_TIMER(1);
@@ -265,10 +289,10 @@ struct Solver {
     }
     START_TIMER(2);
     // 縦の壁だけ固定して面積ペナルティを最小化しようとする解
-    Result noarea2_result = solve_noarea_fixed_column();
+    FixColumnSolution noarea2_sol = solve_noarea_fixed_column();
     STOP_TIMER(2);
-    if (noarea2_result.score() < best_result.score()) {
-      best_result = noarea2_result;
+    if (noarea2_sol.score() < best_result.score()) {
+      best_result = noarea2_sol.to_result();
       best_score = best_result.score();
     }
 
@@ -616,11 +640,15 @@ struct Solver {
     return Result(rects, sum_pena_area, sum_pena_wall);
   }
 
-  Result solve_noarea_fixed_column() {
+  FixColumnSolution solve_noarea_fixed_column() {
     vector<vector<Rect>> best_rects;
     int best_pena_area = INF;
     int best_pena_wall = INF;
-    int best_col = 0;
+    vi best_ws;
+    vvvi best_nis(D);
+    vvvi best_hss(D);
+    vvvi nis(D);
+    vvvi hss(D);
     for (int t = 0; t < max(10, 100000 / (D * N)); ++t) {
       for (int col = 2; col <= clamp((int)sqrt(N * 3), 4, 7); ++col) {
         vector<double> ratio(col);
@@ -630,38 +658,27 @@ struct Solver {
         vi ws = distribute_len(ratio, W);
         int sum_pena_area = 0;
         int sum_pena_wall = 0;
-        vector<vector<Rect>> rects(D);
         for (int day = 0; day < D && sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall; ++day) {
-          vvi nis = distribute_area(ws, vi(A[day].begin(), A[day].begin() + N));
-          auto [hss, pena_area, pena_wall] = pack_columns(day, nis, ws);
+          nis[day] = distribute_area(ws, vi(A[day].begin(), A[day].begin() + N));
+          auto [hs, pena_area, pena_wall] = pack_columns(day, nis[day], ws);
+          hss[day] = hs;
           sum_pena_area += pena_area;
           sum_pena_wall += pena_wall;
-          rects[day].clear();
-          int x = 0;
-          for (int i = 0; i < col; ++i) {
-            int y = 0;
-            for (int j = 0; j < nis[i].size(); ++j) {
-              rects[day].emplace_back(y, x, y + hss[i][j], x + ws[i]);
-              y += hss[i][j];
-            }
-            x += ws[i];
-          }
         }
         if (sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall) {
           best_pena_area = sum_pena_area;
           best_pena_wall = sum_pena_wall;
-          best_col = col;
-          best_rects = rects;
-          for (int day = 0; day < D; ++day) {
-            sort(best_rects[day].begin(), best_rects[day].end());
-          }
-          debug("pena_area:%d pena_wall:%d col:%d t:%d\n", best_pena_area, best_pena_wall, best_col, t);
+          best_ws = ws;
+          swap(best_nis, nis);
+          swap(best_hss, hss);
+          debug("pena_area:%d pena_wall:%d col:%d t:%d\n", best_pena_area, best_pena_wall, col, t);
         }
       }
     }
     debug("solve_noarea_fixed_column:%d %d %d\n", best_pena_area + best_pena_wall, best_pena_area, best_pena_wall);
-    return Result(best_rects, best_pena_area, best_pena_wall);
+    return FixColumnSolution(best_ws, best_nis, best_hss, best_pena_area, best_pena_wall);
   }
+
   Result solve_cols(const vi& xs) {
     const int col = xs.size() - 1;
     vector<vector<double>> dp(col, vector<double>(N + 1, 1e99));
