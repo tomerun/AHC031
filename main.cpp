@@ -907,9 +907,12 @@ struct Solver {
     vi ai(n);
     for (int i = n - 1; i >= 0; --i) {
       int pos = 0;
+      int min_h = hs[0] + (areas[i] + ws[0] - 1) / ws[0];
       for (int j = 1; j < col; ++j) {
-        if (hs[j] < hs[pos] || (hs[j] == hs[pos] && ws[pos] < ws[j])) {
+        int cur_h = hs[j] + (areas[i] + ws[j] - 1) / ws[j];
+        if (cur_h < min_h || (cur_h == min_h && ws[pos] < ws[j])) {
           pos = j;
+          min_h = cur_h;
         }
       }
       ai[i] = pos;
