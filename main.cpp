@@ -289,52 +289,46 @@ struct Solver {
     START_TIMER(1);
     // TODO:見込みがない場合はやらない
     // 壁のことは無視して面積ペナルティのみを最小化しようとする解
-    // Result noarea_result = solve_noarea();
+    Result noarea_result = solve_noarea();
     STOP_TIMER(1);
-    // if (noarea_result.score() < best_result.score()) {
-    //   best_result = noarea_result;
-    //   best_score = best_result.score();
-    // }
     START_TIMER(2);
     // 縦の壁だけ固定して面積ペナルティを最小化しようとする解
-    // FixColumnSolution noarea_fix_sol = solve_noarea_fixed_column();
+    FixColumnSolution noarea_fix_sol = solve_noarea_fixed_column();
     STOP_TIMER(2);
-    // int col = noarea_fix_sol.ws.size();
-    // debug("fix_col:%d\n", col);
-    // debug_vec(noarea_fix_sol.ws, "ws");
-    // for (int i = 0; i < D; ++i) {
-    //   debugStr("[");
-    //   for (int j = 0; j < col; ++j) {
-    //     debug("%lu ", noarea_fix_sol.nis[i][j].size());
-    //   }
-    //   debugStr("]\n");
-    // }
-    // noarea_fix_sol = improve(noarea_fix_sol, timelimit);
-    // best_result = noarea_fix_sol.to_result();
+    int col = noarea_fix_sol.ws.size();
+    debug("fix_col:%d\n", col);
+    debug_vec(noarea_fix_sol.ws, "ws");
+    for (int i = 0; i < D; ++i) {
+      debugStr("[");
+      for (int j = 0; j < col; ++j) {
+        debug("%lu ", noarea_fix_sol.nis[i][j].size());
+      }
+      debugStr("]\n");
+    }
 
     ll time_left = timelimit - get_time();
-    debug("time_left:%lld\n", time_left);
+    START_TIMER(3);
     FixColumnSolution dp_sol = solve_dp(timelimit - time_left / 2);
+    STOP_TIMER(3);
     debug("dp_score:%lld\n", dp_sol.score());
-    // if (noarea_result.score() < noarea_fix_sol.score() && dp_result.score()) {
-    //   best_result = noarea_result;
-    //   while (true) {
-    //     if (get_time() > timelimit - 50) break;
-    //     Result res = solve_noarea();
-    //     if (res.score() < best_result.score()) {
-    //       debug("noarea_score:%lld\n", res.score());
-    //       best_result = res;
-    //     }
-    //   }
-    // } else if (dp_result.score() < noarea_fix_sol.score()) {
-    dp_sol = improve(dp_sol, timelimit);
-    best_result = dp_sol.to_result();
-    // Result dp_result2 = solve_dp(timelimit - time_left / 2);
-    // best_result = dp_result2.score() < dp_result.score() ? dp_result2 : dp_result;
-    // } else {
-    //   noarea_fix_sol = improve(noarea_fix_sol, timelimit);
-    //   best_result = noarea_fix_sol.to_result();
-    // }
+    if (noarea_result.score() < noarea_fix_sol.score() && noarea_result.score() < dp_sol.score()) {
+      // TODO: インクリメンタルに更新可能にする
+      best_result = noarea_result;
+      while (true) {
+        if (get_time() > timelimit - 50) break;
+        Result res = solve_noarea();
+        if (res.score() < best_result.score()) {
+          debug("noarea_score:%lld\n", res.score());
+          best_result = res;
+        }
+      }
+    } else if (noarea_fix_sol.score() < dp_sol.score()) {
+      noarea_fix_sol = improve(noarea_fix_sol, timelimit);
+      best_result = noarea_fix_sol.to_result();
+    } else {
+      dp_sol = improve(dp_sol, timelimit);
+      best_result = dp_sol.to_result();
+    }
 
     return best_result;
   }
