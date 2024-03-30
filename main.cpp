@@ -205,14 +205,15 @@ struct Result {
   vector<vector<Rect>> rects;
   int64_t pena_area;
   int64_t pena_wall;
+  int col;
 
-  Result(vector<vector<Rect>> rects_, int64_t pena_area_, int64_t pena_wall_)
-      : rects(rects_), pena_area(pena_area_), pena_wall(pena_wall_) {}
+  Result(vector<vector<Rect>> rects_, int64_t pena_area_, int64_t pena_wall_, int col_)
+      : rects(rects_), pena_area(pena_area_), pena_wall(pena_wall_), col(col_) {}
 
   int64_t score() const { return pena_area + pena_wall + 1; }
 };
 
-const Result RESULT_EMPTY(vector<vector<Rect>>(), INF, INF);
+const Result RESULT_EMPTY(vector<vector<Rect>>(), INF, INF, -1);
 
 struct FixColumnSolution {
   vi ws;
@@ -251,7 +252,7 @@ struct FixColumnSolution {
       }
     }
     debug("pena_area:%lld pena_wall:%lld\n", real_pena_area, pena_wall);
-    return Result(rects, real_pena_area, pena_wall);
+    return Result(rects, real_pena_area, pena_wall, ws.size());
   }
 };
 const FixColumnSolution SOL_EMPTY(vi(), vvvi(), vvvi(), INF, INF);
@@ -716,6 +717,16 @@ struct Solver {
     shuffle(nis);
     static vvi dp(N + 1, vi(W + 1, INF));
     static vvi prev(N + 1, vi(W + 1, 0));
+    static vi gain_y(W + 1);
+    for (int i = 1; i < W; ++i) {
+      gain_y[i] = 0;
+      if (day != 0 && sep_cnt_before[i] != sep_cnt_before[i - 1]) {
+        gain_y[i] += w * 2;
+      }
+      if (day != D - 1 && sep_cnt_after[i] != sep_cnt_after[i - 1]) {
+        gain_y[i] += w * 2;
+      }
+    }
     for (int i = 1; i <= nis.size(); ++i) {
       fill(dp[i].begin(), dp[i].end(), INF);
     }
@@ -730,12 +741,13 @@ struct Solver {
       int nv = dp[i][cy];
       int a = (ny - cy) * w;
       if (a < na) nv += (na - a) * 100;
-      if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
-        nv -= w * 2;
-      }
-      if (day != D - 1 && ny != W && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
-        nv -= w * 2;
-      }
+      nv -= gain_y[ny];
+      // if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
+      //   nv -= w * 2;
+      // }
+      // if (day != D - 1 && ny != W && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
+      //   nv -= w * 2;
+      // }
       if (nv < dp[i + 1][ny]) {
         dp[i + 1][ny] = nv;
         prev[i + 1][ny] = cy;
@@ -743,9 +755,11 @@ struct Solver {
     };
 
     for (int i = 0; i < nis.size(); ++i) {
+      int min_v = INF;
       int ai = nis[i];
       for (int y = 0; y < W; ++y) {
-        if (dp[i][y] == INF) continue;
+        if (dp[i][y] >= min_v) continue;
+        min_v = dp[i][y];
         int jy = y + (A[day][ai] + w - 1) / w;
         if (jy < W) {
           update_dp(i, y, jy, A[day][ai]);
@@ -1001,7 +1015,7 @@ struct Solver {
       }
     }
     debug("solve_nomove_score:%lld\n", pena);
-    return Result(vector<vector<Rect>>(D, rects), pena, 0ll);
+    return Result(vector<vector<Rect>>(D, rects), pena, 0ll, best_ws.size());
   }
 
   pair<int64_t, vi> solve_nomove_column(const vi& nis, const vi& areas, int width) {
@@ -1184,7 +1198,7 @@ struct Solver {
       rects.push_back(best_rect);
     }
     debug("solve_noarea:%lld %lld %lld\n", sum_pena_area + sum_pena_wall, sum_pena_area, sum_pena_wall);
-    return Result(rects, sum_pena_area, sum_pena_wall);
+    return Result(rects, sum_pena_area, sum_pena_wall, -1);
   }
 
   FixColumnSolution solve_noarea_fixed_column() {
@@ -1196,8 +1210,9 @@ struct Solver {
     vvvi best_hss(D);
     vvvi nis(D);
     vvvi hss(D);
+    const int max_col = (N + 1) * 2 / 3;
     for (int t = 0; t < max(10, 100000 / (D * N)); ++t) {
-      for (int col = 2; col <= clamp((int)sqrt(N * 3), 4, 7); ++col) {
+      for (int col = 2; col <= max_col; ++col) {
         vector<double> ratio(col);
         for (int i = 0; i < col; ++i) {
           ratio[i] = rnd.next(5.0) + 1.0;
@@ -1235,7 +1250,7 @@ struct Solver {
     debugStr("------ solve_dp ------\n");
     FixColumnSolution best_sol = SOL_EMPTY;
     int turn = 0;
-    int max_col = ceil(sqrt(D) * 1.5);
+    const int max_col = (N + 1) * 2 / 3;
     while (true) {
       for (int col = 2; col <= max_col; ++col) {
         if (tl < get_time()) {
@@ -1528,5 +1543,5 @@ int main() {
   }
   PRINT_TIMER();
   PRINT_COUNTER();
-  debug("score:%8lld pena_area:%8lld pena_wall:%8lld\n", res.score(), res.pena_area, res.pena_wall);
+  debug("score:%8lld pena_area:%8lld pena_wall:%8lld col:%d\n", res.score(), res.pena_area, res.pena_wall, res.col);
 }
