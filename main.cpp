@@ -329,41 +329,6 @@ struct Solver {
     return best_result;
   }
 
-  Result solve_dp(ll tl) {
-    Result best_result = RESULT_EMPTY;
-    int turn = 0;
-    int max_col = ceil(sqrt(D) * 1.5);
-    while (true) {
-      for (int col = 1; col <= max_col; ++col) {
-        if (tl < get_time()) {
-          debug("turn:%d\n", turn * max_col + col - 1);
-          return best_result;
-        }
-        if (turn > 0 && col == 1) continue;
-        double max_ratio = rnd.next(40.0) + 10.0;
-        double amp = rnd.next(1.0) + 1.0;
-        vector<double> ratio = {1.0};
-        for (int i = 1; i < col; ++i) {
-          ratio.push_back(min(max_ratio, ratio.back() * amp));
-        }
-        vi lens = distribute_len(ratio, W);
-        vi xs = {0};
-        for (int i = 0; i < col; ++i) {
-          xs.push_back(xs.back() + lens[i]);
-        }
-        // debug_vec(xs, "xs");
-        Result res = solve_cols(xs);
-        debug("score:%lld col:%d max_ratio:%f amp:%f\n", res.score(), col, max_ratio, amp);
-        if (res.score() < best_result.score()) {
-          best_result = res;
-          best_score = res.score();
-        }
-      }
-      turn++;
-    }
-    return best_result;
-  }
-
   void set_sep_info(const vi& hs, vi& sep_cnt, vi& prev_sep, vi& next_sep) {
     fill(sep_cnt.begin(), sep_cnt.end(), 0);
     int y = 0;
@@ -506,7 +471,7 @@ struct Solver {
       } else if (type < 97) {
         // 1要素を移動
         int day = rnd.next(D);
-        if (sol.nis[day][c0].empty()) {
+        if (sol.nis[day][c0].size() <= 1) {
           continue;
         }
         // clang-format off
@@ -1124,6 +1089,41 @@ struct Solver {
     }
     debug("solve_noarea_fixed_column:%d %d %d\n", best_pena_area + best_pena_wall, best_pena_area, best_pena_wall);
     return FixColumnSolution(best_ws, best_nis, best_hss, best_pena_area, best_pena_wall);
+  }
+
+  Result solve_dp(ll tl) {
+    Result best_result = RESULT_EMPTY;
+    int turn = 0;
+    int max_col = ceil(sqrt(D) * 1.5);
+    while (true) {
+      for (int col = 1; col <= max_col; ++col) {
+        if (tl < get_time()) {
+          debug("turn:%d\n", turn * max_col + col - 1);
+          return best_result;
+        }
+        if (turn > 0 && col == 1) continue;
+        double max_ratio = rnd.next(40.0) + 10.0;
+        double amp = rnd.next(1.0) + 1.0;
+        vector<double> ratio = {1.0};
+        for (int i = 1; i < col; ++i) {
+          ratio.push_back(min(max_ratio, ratio.back() * amp));
+        }
+        vi lens = distribute_len(ratio, W);
+        vi xs = {0};
+        for (int i = 0; i < col; ++i) {
+          xs.push_back(xs.back() + lens[i]);
+        }
+        // debug_vec(xs, "xs");
+        Result res = solve_cols(xs);
+        debug("score:%lld col:%d max_ratio:%f amp:%f\n", res.score(), col, max_ratio, amp);
+        if (res.score() < best_result.score()) {
+          best_result = res;
+          best_score = res.score();
+        }
+      }
+      turn++;
+    }
+    return best_result;
   }
 
   Result solve_cols(const vi& xs) {
