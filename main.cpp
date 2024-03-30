@@ -44,7 +44,7 @@ namespace {
 #ifdef LOCAL
 constexpr ll TL = 500;
 #else
-constexpr ll TL = 2500;
+constexpr ll TL = 2000;
 #endif
 
 inline ll get_time() {
@@ -416,7 +416,7 @@ struct Solver {
       }
       int type = rnd.next() & 0xF;
       int diff = 0;
-      if (type < 0 && col > 1) {
+      if (col > 1 && type <= 0) {
         // 行の幅を変更
         if (sol.ws[c1] == 1) continue;
         for (int day = 0; day < D; ++day) {
@@ -478,8 +478,8 @@ struct Solver {
             debug("best_sol change_width:%d turn:%d\n", pena, turn);
           }
         }
-      } else if (type < 97) {
-        // 1要素を移動
+      } else if (col == 1 || type < 8) {
+        // 順序だけ変える
         int day = rnd.next(D);
         if (sol.nis[day][c0].size() <= 1) {
           continue;
@@ -551,8 +551,137 @@ struct Solver {
           }
         }
       } else {
-        // 2要素を交換
-        // int day = rnd.next(D);
+        int day = rnd.next(D);
+        if (sol.nis[day][c0].size() == 0) {
+          continue;
+        }
+        int p0 = rnd.next(sol.nis[day][c0].size());
+        int p1 = 0;
+        if (type < 12) {
+          // c0->c1へ1要素を移動
+          int ma = sol.nis[day][c0][p0];
+          sol.nis[day][c0].erase(sol.nis[day][c0].begin() + p0);
+          sol.nis[day][c1].push_back(ma);
+        } else {
+          // 2要素を交換
+          if (sol.nis[day][c1].size() == 0) {
+            continue;
+          }
+          p1 = rnd.next(sol.nis[day][c1].size());
+          swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
+        }
+        // clang-format off
+        auto [new_pena0, new_hs0] = improve_col(
+          day,
+          sol.nis[day][c0],
+          sol.ws[c0],
+          day == 0 ? vi() : sep_cnt[day - 1][c0],
+          day == 0 ? vi() : prev_sep[day - 1][c0],
+          day == 0 ? vi() : next_sep[day - 1][c0],
+          day == D - 1 ? vi() : sep_cnt[day + 1][c0],
+          day == D - 1 ? vi() : prev_sep[day + 1][c0],
+          day == D - 1 ? vi() : next_sep[day + 1][c0]
+        );
+        auto [new_pena1, new_hs1] = improve_col(
+          day,
+          sol.nis[day][c1],
+          sol.ws[c1],
+          day == 0 ? vi() : sep_cnt[day - 1][c1],
+          day == 0 ? vi() : prev_sep[day - 1][c1],
+          day == 0 ? vi() : next_sep[day - 1][c1],
+          day == D - 1 ? vi() : sep_cnt[day + 1][c1],
+          day == D - 1 ? vi() : prev_sep[day + 1][c1],
+          day == D - 1 ? vi() : next_sep[day + 1][c1]
+        );
+        // clang-format on
+        diff = new_pena0 + new_pena1;
+        diff -= pena_area[day][c0] + pena_area[day][c1];
+        diff -= pena_sep[day][c0] + pena_sep[day][c1];
+        diff -= pena_sep[day + 1][c0] + pena_sep[day + 1][c1];
+        if (diff <= 0) {
+          // debug("day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
+          // debug_vec(new_hs, "hs");
+          // debug_vec(sol.nis[day][c0]);
+          sol.hss[day][c0] = new_hs0;
+          sol.hss[day][c1] = new_hs1;
+          if (day != 0) {
+            pena_sep[day][c0] = (sol.nis[day][c0].size() + sep_cnt[day - 1][c0][W] - 2) * sol.ws[c0];
+            pena_sep[day][c1] = (sol.nis[day][c1].size() + sep_cnt[day - 1][c1][W] - 2) * sol.ws[c1];
+            int y = 0;
+            for (int h : new_hs0) {
+              y += h;
+              if (y == W) break;
+              if (sep_cnt[day - 1][c0][y - 1] != sep_cnt[day - 1][c0][y]) {
+                pena_sep[day][c0] -= 2 * sol.ws[c0];
+              }
+            }
+            y = 0;
+            for (int h : new_hs1) {
+              y += h;
+              if (y == W) break;
+              if (sep_cnt[day - 1][c1][y - 1] != sep_cnt[day - 1][c1][y]) {
+                pena_sep[day][c1] -= 2 * sol.ws[c1];
+              }
+            }
+          }
+          if (day != D - 1) {
+            pena_sep[day + 1][c0] = (sol.nis[day][c0].size() + sep_cnt[day + 1][c0][W] - 2) * sol.ws[c0];
+            pena_sep[day + 1][c1] = (sol.nis[day][c1].size() + sep_cnt[day + 1][c1][W] - 2) * sol.ws[c1];
+            int y = 0;
+            for (int h : new_hs0) {
+              y += h;
+              if (y == W) break;
+              if (sep_cnt[day + 1][c0][y - 1] != sep_cnt[day + 1][c0][y]) {
+                pena_sep[day + 1][c0] -= 2 * sol.ws[c0];
+              }
+            }
+            y = 0;
+            for (int h : new_hs1) {
+              y += h;
+              if (y == W) break;
+              if (sep_cnt[day + 1][c1][y - 1] != sep_cnt[day + 1][c1][y]) {
+                pena_sep[day + 1][c1] -= 2 * sol.ws[c1];
+              }
+            }
+          }
+          sort(new_hs0.begin(), new_hs0.end());
+          sort(new_hs1.begin(), new_hs1.end());
+          sort(sol.nis[day][c0].begin(), sol.nis[day][c0].end());
+          sort(sol.nis[day][c1].begin(), sol.nis[day][c1].end());
+          pena_area[day][c0] = 0;
+          pena_area[day][c1] = 0;
+          for (int i = 0; i < sol.nis[day][c0].size(); ++i) {
+            int area_diff = A[day][sol.nis[day][c0][i]] - new_hs0[i] * sol.ws[c0];
+            if (area_diff > 0) {
+              pena_area[day][c0] += area_diff * 100;
+            }
+          }
+          for (int i = 0; i < sol.nis[day][c1].size(); ++i) {
+            int area_diff = A[day][sol.nis[day][c1][i]] - new_hs1[i] * sol.ws[c1];
+            if (area_diff > 0) {
+              pena_area[day][c1] += area_diff * 100;
+            }
+          }
+          set_sep_info(sol.hss[day][c0], sep_cnt[day][c0], prev_sep[day][c0], next_sep[day][c0]);
+          set_sep_info(sol.hss[day][c1], sep_cnt[day][c1], prev_sep[day][c1], next_sep[day][c1]);
+          int real_pena = pena_sep[day][c0] + pena_sep[day + 1][c0] + pena_area[day][c0] + pena_sep[day][c1] + pena_sep[day + 1][c1] +
+                          pena_area[day][c1];
+          // debug("penas: %d %d %d %d %d\n", new_pena, pena_sep[day][c0], pena_sep[day + 1][c0], pena_area[day][c0], real_pena);
+          assert((new_pena0 + new_pena1 - real_pena) % 100 == 0); // 面積順ソートで改善することがあるので面積ペナルティのみずれる
+          diff += real_pena - new_pena0 - new_pena1;
+          if (diff < 0) {
+            pena += diff;
+            best_sol = sol;
+            debug("best_sol swap:%d turn:%d\n", pena, turn);
+          }
+        } else {
+          if (type < 12) {
+            sol.nis[day][c0].insert(sol.nis[day][c0].begin() + p0, sol.nis[day][c1].back());
+            sol.nis[day][c1].pop_back();
+          } else {
+            swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
+          }
+        }
       }
     }
     best_sol.pena_area = 0;
@@ -1108,7 +1237,7 @@ struct Solver {
     int turn = 0;
     int max_col = ceil(sqrt(D) * 1.5);
     while (true) {
-      for (int col = 1; col <= max_col; ++col) {
+      for (int col = 2; col <= max_col; ++col) {
         if (tl < get_time()) {
           debug("turn:%d\n", turn * max_col + col - 1);
           return best_sol;
