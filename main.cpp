@@ -1026,51 +1026,52 @@ struct Solver {
       ai[i] = pos;
       hs[pos] += (areas[i] + ws[pos] - 1) / ws[pos];
     }
-    vi vs(col);
-    for (int i = 0; i < col; ++i) {
-      vs[i] = eval_height(hs[i]);
-    }
-    // nisを高さが均等になるように詰める
-    const int rep = (int)(5.0 / sqrt(E) * N);
-    for (int i = 0; i < rep; ++i) {
-      int p0 = rnd.next(n);
-      int from = ai[p0];
-      if ((i & 0x3) == 0) {
-        int to = rnd.next(col - 1);
-        if (from <= to) to++;
-        int v0 = eval_height(hs[from] - (areas[p0] + ws[from] - 1) / ws[from]);
-        int v1 = eval_height(hs[to] + (areas[p0] + ws[to] - 1) / ws[to]);
-        int diff = v0 + v1 - vs[from] - vs[to];
-        if (diff <= 0) {
-          vs[from] = v0;
-          vs[to] = v1;
-          hs[from] -= (areas[p0] + ws[from] - 1) / ws[from];
-          hs[to] += (areas[p0] + ws[to] - 1) / ws[to];
-          ai[p0] = to;
-        }
-      } else {
-        int p1 = rnd.next(n - 1);
-        if (p0 <= p1) p1++;
-        if (ai[p0] == ai[p1]) continue;
-        int to = ai[p1];
-        int h0_old = (areas[p0] + ws[from] - 1) / ws[from];
-        int h0_new = (areas[p0] + ws[to] - 1) / ws[to];
-        int h1_old = (areas[p1] + ws[to] - 1) / ws[to];
-        int h1_new = (areas[p1] + ws[from] - 1) / ws[from];
-        int v0 = eval_height(hs[from] + h1_new - h0_old);
-        int v1 = eval_height(hs[to] + h0_new - h1_old);
-        int diff = v0 + v1 - vs[from] - vs[to];
-        if (diff <= 0) {
-          vs[from] = v0;
-          vs[to] = v1;
-          hs[from] += h1_new - h0_old;
-          hs[to] += h0_new - h1_old;
-          ai[p0] = to;
-          ai[p1] = from;
+    if (*max_element(hs.begin(), hs.end()) > W) {
+      vi vs(col);
+      for (int i = 0; i < col; ++i) {
+        vs[i] = eval_height(hs[i]);
+      }
+      // nisを高さが均等になるように詰める
+      const int rep = (int)(5.0 / sqrt(E) * N);
+      for (int i = 0; i < rep; ++i) {
+        int p0 = rnd.next(n);
+        int from = ai[p0];
+        if ((i & 0x3) == 0) {
+          int to = rnd.next(col - 1);
+          if (from <= to) to++;
+          int v0 = eval_height(hs[from] - (areas[p0] + ws[from] - 1) / ws[from]);
+          int v1 = eval_height(hs[to] + (areas[p0] + ws[to] - 1) / ws[to]);
+          int diff = v0 + v1 - vs[from] - vs[to];
+          if (diff <= 0) {
+            vs[from] = v0;
+            vs[to] = v1;
+            hs[from] -= (areas[p0] + ws[from] - 1) / ws[from];
+            hs[to] += (areas[p0] + ws[to] - 1) / ws[to];
+            ai[p0] = to;
+          }
+        } else {
+          int p1 = rnd.next(n - 1);
+          if (p0 <= p1) p1++;
+          if (ai[p0] == ai[p1]) continue;
+          int to = ai[p1];
+          int h0_old = (areas[p0] + ws[from] - 1) / ws[from];
+          int h0_new = (areas[p0] + ws[to] - 1) / ws[to];
+          int h1_old = (areas[p1] + ws[to] - 1) / ws[to];
+          int h1_new = (areas[p1] + ws[from] - 1) / ws[from];
+          int v0 = eval_height(hs[from] + h1_new - h0_old);
+          int v1 = eval_height(hs[to] + h0_new - h1_old);
+          int diff = v0 + v1 - vs[from] - vs[to];
+          if (diff <= 0) {
+            vs[from] = v0;
+            vs[to] = v1;
+            hs[from] += h1_new - h0_old;
+            hs[to] += h0_new - h1_old;
+            ai[p0] = to;
+            ai[p1] = from;
+          }
         }
       }
     }
-    // debug_vec(hs, "hs");
     vvi nis(col);
     for (int i = 0; i < n; ++i) {
       nis[ai[i]].push_back(i);
@@ -1341,7 +1342,7 @@ struct Solver {
     vvvi hss(D);
     const int max_col = (N + 3) / 2;
     for (int t = 0;; ++t) {
-      if (get_time() > tl) break;
+      if (get_time() > tl - TL / 8) break;
       int lo_col = t < 10 ? 2 : max(2, (int)best_ws.size() - 1);
       int hi_col = t < 10 ? max_col : best_ws.size() + 1;
       for (int col = lo_col; col <= hi_col; ++col) {
@@ -1367,6 +1368,35 @@ struct Solver {
           swap(best_hss, hss);
           debug("pena_area:%d pena_wall:%d col:%d t:%d\n", best_pena_area, best_pena_wall, col, t);
         }
+      }
+    }
+    const int col = best_ws.size();
+    for (int t = 0;; ++t) {
+      if (get_time() > tl) break;
+      vi ws = best_ws;
+      int c0 = rnd.next(col);
+      int c1 = rnd.next(col - 1);
+      if (c0 <= c1) c1++;
+      if (ws[c0] <= 5) continue;
+      int mv = rnd.next(ws[c0] / 2) + 1;
+      ws[c0] -= mv;
+      ws[c1] += mv;
+      int sum_pena_area = 0;
+      int sum_pena_wall = 0;
+      for (int day = 0; day < D && sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall; ++day) {
+        nis[day] = distribute_area(ws, vi(A[day].begin(), A[day].begin() + N));
+        auto [hs, pena_area, pena_wall] = pack_columns(day, nis[day], ws);
+        hss[day] = hs;
+        sum_pena_area += pena_area;
+        sum_pena_wall += pena_wall;
+      }
+      if (sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall) {
+        best_pena_area = sum_pena_area;
+        best_pena_wall = sum_pena_wall;
+        best_ws = ws;
+        swap(best_nis, nis);
+        swap(best_hss, hss);
+        debug("2 pena_area:%d pena_wall:%d col:%d t:%d\n", best_pena_area, best_pena_wall, col, t);
       }
     }
     debug("solve_noarea_fixed_column:%d %d %d\n", best_pena_area + best_pena_wall, best_pena_area, best_pena_wall);
