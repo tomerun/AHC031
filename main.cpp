@@ -336,22 +336,12 @@ struct Solver {
       debugStr("]\n");
     }
 
-    // ll time_left = timelimit - get_time();
-    START_TIMER(3);
-    // FixColumnSolution dp_sol = solve_dp(timelimit - time_left / 2);
-    FixColumnSolution dp_sol = SOL_EMPTY;
-    STOP_TIMER(3);
-    debug("dp_score:%lld\n", dp_sol.score());
-    if (noarea_sol.score() < noarea_fix_sol.score() && noarea_sol.score() < dp_sol.score()) {
+    if (noarea_sol.score() * 0.8 < noarea_fix_sol.score() * 0.6) {
       solve_noarea(noarea_sol, timelimit);
-      debug("noarea_score:%lld\n", noarea_sol.score());
       best_result = noarea_sol.to_result();
-    } else if (noarea_fix_sol.score() < dp_sol.score()) {
+    } else {
       noarea_fix_sol = improve(noarea_fix_sol, timelimit);
       best_result = noarea_fix_sol.to_result();
-    } else {
-      dp_sol = improve(dp_sol, timelimit);
-      best_result = dp_sol.to_result();
     }
 
     return best_result;
@@ -424,6 +414,7 @@ struct Solver {
     debug("pena_area:%lld pena_wall:%lld\n", sol.pena_area, sol.pena_wall);
     FixColumnSolution best_sol = sol;
     int pena = sol.pena_area + sol.pena_wall;
+    const int type_th_swap = 0x2F;
     for (int turn = 0;; ++turn) {
       auto cur_time = get_time();
       if (tl < cur_time) {
@@ -566,19 +557,16 @@ struct Solver {
           // debug("penas: %d %d %d %d %d\n", new_pena, pena_sep[day][c0], pena_sep[day + 1][c0], pena_area[day][c0], real_pena);
           assert((new_pena - real_pena) % 100 == 0); // 面積順ソートで改善することがあるので面積ペナルティのみずれる
           diff += real_pena - new_pena;
-          static int update_cnt = 0;
           if (diff < 0) {
             pena += diff;
             best_sol = sol;
             debug("best_sol move:%d turn:%d\n", pena, turn);
-            update_cnt++;
-            // if (update_cnt == th) break;
           }
         }
       } else {
         int p0 = rnd.next(sol.nis[day][c0].size());
         int p1 = 0;
-        if (type < 0x2F) {
+        if (type < type_th_swap) {
           // 2要素を交換
           if (sol.nis[day][c1].size() == 0) {
             continue;
@@ -619,7 +607,7 @@ struct Solver {
         diff -= pena_area[day][c0] + pena_area[day][c1];
         diff -= pena_sep[day][c0] + pena_sep[day][c1];
         diff -= pena_sep[day + 1][c0] + pena_sep[day + 1][c1];
-        if (type < 12) {
+        if (type < type_th_swap) {
           debug("diff_move:%d\n", diff);
         } else {
           debug("diff_swap:%d\n", diff);
@@ -702,7 +690,7 @@ struct Solver {
             debug("best_sol swap:%d turn:%d\n", pena, turn);
           }
         } else {
-          if (type < 0x2F) {
+          if (type < type_th_swap) {
             swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
           } else {
             sol.nis[day][c0].insert(sol.nis[day][c0].begin() + p0, sol.nis[day][c1].back());
@@ -761,11 +749,11 @@ struct Solver {
         nv -= w * 2;
       }
       if (nv < dp[i + 1][ny]) {
-        dp[i + 1][ny] = nv;
-        prev[i + 1][ny] = cy;
-        if (find(next_vaild_pos.begin(), next_vaild_pos.end(), ny) == next_vaild_pos.end()) {
+        if (dp[i + 1][ny] == INF) {
           next_vaild_pos.push_back(ny);
         }
+        dp[i + 1][ny] = nv;
+        prev[i + 1][ny] = cy;
       }
     };
 
@@ -1234,7 +1222,7 @@ struct Solver {
       for (int col = 2; col <= max_col; ++col) {
         vector<double> ratio(col);
         for (int i = 0; i < col; ++i) {
-          ratio[i] = rnd.next(5.0) + 1.0;
+          ratio[i] = rnd.next(10.0) + 1.0;
         }
         vi ws = distribute_len(ratio, W);
         int sum_pena_area = 0;
