@@ -1309,7 +1309,9 @@ struct Solver {
     const int max_col = (N + 3) / 2;
     for (int t = 0;; ++t) {
       if (get_time() > tl) break;
-      for (int col = 2; col <= max_col; ++col) {
+      int lo_col = t < 10 ? 2 : max(2, (int)best_ws.size() - 1);
+      int hi_col = t < 10 ? max_col : best_ws.size() + 1;
+      for (int col = lo_col; col <= hi_col; ++col) {
         vector<double> ratio(col);
         for (int i = 0; i < col; ++i) {
           ratio[i] = rnd.next(10.0) + 1.0;
