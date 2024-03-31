@@ -1347,7 +1347,7 @@ struct Solver {
       for (int col = lo_col; col <= hi_col; ++col) {
         vector<double> ratio(col);
         for (int i = 0; i < col; ++i) {
-          ratio[i] = rnd.next(10.0) + 1.0;
+          ratio[i] = rnd.next(18.0) + 1.0;
         }
         vi ws = distribute_len(ratio, W);
         int sum_pena_area = 0;
