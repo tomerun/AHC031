@@ -746,19 +746,6 @@ struct Solver {
     shuffle(nis);
     static vvi dp(N + 1, vi(W + 1, INF));
     static vvi prev(N + 1, vi(W + 1, 0));
-    static vi gain_y(W + 1);
-    for (int i = 1; i < W; ++i) {
-      gain_y[i] = 0;
-      if (day != 0 && sep_cnt_before[i] != sep_cnt_before[i - 1]) {
-        gain_y[i] += w * 2;
-      }
-      if (day != D - 1 && sep_cnt_after[i] != sep_cnt_after[i - 1]) {
-        gain_y[i] += w * 2;
-      }
-    }
-    for (int i = 1; i <= nis.size(); ++i) {
-      fill(dp[i].begin(), dp[i].end(), INF);
-    }
     dp[0][0] = 0;
     if (day != 0) {
       dp[0][0] += (nis.size() - 1 + sep_cnt_before[W] - 1) * w;
@@ -766,49 +753,66 @@ struct Solver {
     if (day != D - 1) {
       dp[0][0] += (nis.size() - 1 + sep_cnt_after[W] - 1) * w;
     }
-    auto update_dp = [&](int i, int cy, int ny, int na) {
+    auto update_dp = [&](int i, int cy, int ny, int na, vi& next_vaild_pos) {
       int nv = dp[i][cy];
       int a = (ny - cy) * w;
       if (a < na) nv += (na - a) * 100;
-      nv -= gain_y[ny];
-      // if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
-      //   nv -= w * 2;
-      // }
-      // if (day != D - 1 && ny != W && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
-      //   nv -= w * 2;
-      // }
+      if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
+        nv -= w * 2;
+      }
+      if (day != D - 1 && ny != W && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
+        nv -= w * 2;
+      }
       if (nv < dp[i + 1][ny]) {
         dp[i + 1][ny] = nv;
         prev[i + 1][ny] = cy;
+        if (find(next_vaild_pos.begin(), next_vaild_pos.end(), ny) == next_vaild_pos.end()) {
+          next_vaild_pos.push_back(ny);
+        }
       }
     };
 
+    vi valid_pos = {0};
+    vi next_valid_pos;
     for (int i = 0; i < nis.size(); ++i) {
+      next_valid_pos.clear();
       int min_v = INF;
       int ai = nis[i];
-      for (int y = 0; y < W; ++y) {
-        if (dp[i][y] >= min_v) continue;
+      for (int y : valid_pos) {
+        if (dp[i][y] >= min_v) {
+          dp[i][y] = INF;
+          continue;
+        }
         min_v = dp[i][y];
         int jy = y + (A[day][ai] + w - 1) / w;
         if (jy < W) {
-          update_dp(i, y, jy, A[day][ai]);
+          update_dp(i, y, jy, A[day][ai], next_valid_pos);
           int ny = W;
           if (day != 0) ny = next_sep_before[jy];
           if (day != D - 1) ny = min(ny, next_sep_after[jy]);
-          update_dp(i, y, ny, A[day][ai]);
+          update_dp(i, y, ny, A[day][ai], next_valid_pos);
         }
         if (jy != y + 1 && jy - 1 < W) {
-          update_dp(i, y, jy - 1, A[day][ai]);
+          update_dp(i, y, jy - 1, A[day][ai], next_valid_pos);
         }
-        update_dp(i, y, W, A[day][ai]);
+        if (i == nis.size() - 1) {
+          update_dp(i, y, W, A[day][ai], next_valid_pos);
+        }
         jy = min(jy, W);
         int py = 0;
         if (day != 0) py = prev_sep_before[jy];
         if (day != D - 1) py = max(py, prev_sep_after[jy]);
         if (py > y) {
-          update_dp(i, y, py, A[day][ai]);
+          update_dp(i, y, py, A[day][ai], next_valid_pos);
         }
+        dp[i][y] = INF;
       }
+      swap(valid_pos, next_valid_pos);
+      sort(valid_pos.begin(), valid_pos.end());
+    }
+    int ret = dp[nis.size()][W];
+    for (int y : valid_pos) {
+      dp[nis.size()][y] = INF;
     }
     int y = W; // TODO: Wが最適でないケースを考慮
     int i = nis.size();
@@ -820,7 +824,7 @@ struct Solver {
       i--;
     }
     reverse(hs.begin(), hs.end());
-    return make_pair(dp[nis.size()][W], hs);
+    return make_pair(ret, hs);
   }
 
   pair<int, vi> improve_col_dp(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
