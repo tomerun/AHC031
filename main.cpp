@@ -595,9 +595,32 @@ struct Solver {
           }
           p1 = rnd.next(sol.nis[day][c1].size());
           swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
+          int sum_a = 0;
+          for (int ni : sol.nis[day][c0]) {
+            sum_a += A[day][ni];
+          }
+          if (sum_a > sol.ws[c0] * W) {
+            swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
+            continue;
+          }
+          sum_a = 0;
+          for (int ni : sol.nis[day][c1]) {
+            sum_a += A[day][ni];
+          }
+          if (sum_a > sol.ws[c1] * W) {
+            swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
+            continue;
+          }
         } else {
           // c0->c1へ1要素を移動
           int ma = sol.nis[day][c0][p0];
+          int sum_a = A[day][ma];
+          for (int ni : sol.nis[day][c1]) {
+            sum_a += A[day][ni];
+          }
+          if (sum_a > sol.ws[c1] * W) {
+            continue;
+          }
           sol.nis[day][c0].erase(sol.nis[day][c0].begin() + p0);
           sol.nis[day][c1].push_back(ma);
         }
