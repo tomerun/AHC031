@@ -313,10 +313,11 @@ struct Solver {
 
     Result best_result = RESULT_EMPTY;
     START_TIMER(1);
-    // TODO:見込みがない場合はやらない
     // 壁のことは無視して面積ペナルティのみを最小化しようとする解
     FreeSolution noarea_sol;
-    solve_noarea(noarea_sol, get_time() + 50);
+    if (E < 0.02 || N <= 6) {
+      solve_noarea(noarea_sol, get_time() + 50);
+    }
     debug("noarea_score:%lld\n", noarea_sol.score());
     STOP_TIMER(1);
     START_TIMER(2);
@@ -437,18 +438,22 @@ struct Solver {
         c1 = rnd.next(col - 1);
         if (c0 <= c1) c1++;
       }
-      int type = rnd.next() & 0xF;
+      int day = rnd.next(D);
+      if (sol.nis[day][c0].size() == 0) {
+        continue;
+      }
+      int type = rnd.next() & 0x3F;
       int diff = 0;
       if (col > 1 && type <= 0) {
         // 行の幅を変更
         if (sol.ws[c1] == 1) continue;
-        for (int day = 0; day < D; ++day) {
+        for (day = 0; day < D; ++day) {
           diff -= pena_sep[day][c0];
           diff -= pena_sep[day][c1];
           diff -= pena_area[day][c0];
           diff -= pena_area[day][c1];
         }
-        for (int day = 0; day < D; ++day) {
+        for (day = 0; day < D; ++day) {
           assert(pena_sep[day][c0] % sol.ws[c0] == 0);
           assert(pena_sep[day][c1] % sol.ws[c1] == 0);
           diff += pena_sep[day][c0] * (sol.ws[c0] + 1) / sol.ws[c0];
@@ -472,7 +477,7 @@ struct Solver {
         }
         if (diff <= 0) {
           pena += diff;
-          for (int day = 0; day < D; ++day) {
+          for (day = 0; day < D; ++day) {
             pena_sep[day][c0] = pena_sep[day][c0] * (sol.ws[c0] + 1) / sol.ws[c0];
             pena_sep[day][c1] = pena_sep[day][c1] * (sol.ws[c1] - 1) / sol.ws[c1];
             pena_area[day][c0] = 0;
@@ -501,12 +506,8 @@ struct Solver {
             debug("best_sol change_width:%d turn:%d\n", pena, turn);
           }
         }
-      } else if (col == 1 || type < 8) {
+      } else if (col == 1 || (type < 0x1F && sol.nis[day][c0].size() > 1)) {
         // 順序だけ変える
-        int day = rnd.next(D);
-        if (sol.nis[day][c0].size() <= 1) {
-          continue;
-        }
         // clang-format off
         auto [new_pena, new_hs] = improve_col(
           day,
@@ -575,24 +576,20 @@ struct Solver {
           }
         }
       } else {
-        int day = rnd.next(D);
-        if (sol.nis[day][c0].size() == 0) {
-          continue;
-        }
         int p0 = rnd.next(sol.nis[day][c0].size());
         int p1 = 0;
-        if (type < 12) {
-          // c0->c1へ1要素を移動
-          int ma = sol.nis[day][c0][p0];
-          sol.nis[day][c0].erase(sol.nis[day][c0].begin() + p0);
-          sol.nis[day][c1].push_back(ma);
-        } else {
+        if (type < 0x2F) {
           // 2要素を交換
           if (sol.nis[day][c1].size() == 0) {
             continue;
           }
           p1 = rnd.next(sol.nis[day][c1].size());
           swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
+        } else {
+          // c0->c1へ1要素を移動
+          int ma = sol.nis[day][c0][p0];
+          sol.nis[day][c0].erase(sol.nis[day][c0].begin() + p0);
+          sol.nis[day][c1].push_back(ma);
         }
         // clang-format off
         auto [new_pena0, new_hs0] = improve_col(
@@ -705,11 +702,11 @@ struct Solver {
             debug("best_sol swap:%d turn:%d\n", pena, turn);
           }
         } else {
-          if (type < 12) {
+          if (type < 0x2F) {
+            swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
+          } else {
             sol.nis[day][c0].insert(sol.nis[day][c0].begin() + p0, sol.nis[day][c1].back());
             sol.nis[day][c1].pop_back();
-          } else {
-            swap(sol.nis[day][c0][p0], sol.nis[day][c1][p1]);
           }
         }
       }
@@ -1231,8 +1228,8 @@ struct Solver {
     vvvi best_hss(D);
     vvvi nis(D);
     vvvi hss(D);
-    const int max_col = (N + 1) * 2 / 3;
-    for (int t = 0; t < max(10, 100000 / (D * N)); ++t) {
+    const int max_col = (N + 3) / 2;
+    for (int t = 0;; ++t) {
       if (get_time() > tl) break;
       for (int col = 2; col <= max_col; ++col) {
         vector<double> ratio(col);
