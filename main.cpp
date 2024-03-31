@@ -355,9 +355,13 @@ struct Solver {
       y += h;
       sep_cnt[y]++;
     }
-    sep_cnt[W] = 1; // Wまで詰めないケースを考慮
+    if (hs.empty()) {
+      sep_cnt[W] = 1;
+    }
+    // sep_cnt[W] = 1; // Wまで詰めないケースを考慮
     int prev = 0;
-    int next = W;
+    int next = sep_cnt[W] == 1 ? W : -1;
+    next_sep[W] = next;
     for (int i = 1; i <= W; ++i) {
       prev_sep[i] = prev;
       if (sep_cnt[i]) prev = i;
@@ -518,9 +522,8 @@ struct Solver {
         );
         // clang-format on
         diff += new_pena;
-        debug("diff_shuffle:%d\n", diff);
         if (diff <= 0) {
-          // debug("day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
+          debug("shuffle day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
           // debug_vec(new_hs, "hs");
           // debug_vec(sol.nis[day][c0]);
           sol.hss[day][c0] = new_hs;
@@ -534,6 +537,12 @@ struct Solver {
                 pena_sep[day][c0] -= 2 * sol.ws[c0];
               }
             }
+            if (y < W) {
+              pena_sep[day][c0] += sol.ws[c0];
+            }
+            if (next_sep[day - 1][c0][W] == -1) {
+              pena_sep[day][c0] += sol.ws[c0];
+            }
           }
           if (day != D - 1) {
             pena_sep[day + 1][c0] = (sol.nis[day][c0].size() + sep_cnt[day + 1][c0][W] - 2) * sol.ws[c0];
@@ -544,6 +553,12 @@ struct Solver {
               if (sep_cnt[day + 1][c0][y - 1] != sep_cnt[day + 1][c0][y]) {
                 pena_sep[day + 1][c0] -= 2 * sol.ws[c0];
               }
+            }
+            if (y < W) {
+              pena_sep[day + 1][c0] += sol.ws[c0];
+            }
+            if (next_sep[day + 1][c0][W] == -1) {
+              pena_sep[day + 1][c0] += sol.ws[c0];
             }
           }
           sort(new_hs.begin(), new_hs.end());
@@ -556,6 +571,11 @@ struct Solver {
           }
           set_sep_info(sol.hss[day][c0], sep_cnt[day][c0], prev_sep[day][c0], next_sep[day][c0]);
           int real_pena = pena_sep[day][c0] + pena_sep[day + 1][c0] + pena_area[day][c0];
+          // debug_vec(sol.hss[day][c0], "hs");
+          // if (day != 0) debug_vec(sol.hss[day - 1][c0], "hs_before");
+          // if (day != D - 1) debug_vec(sol.hss[day + 1][c0], "hs_after");
+          // debug("%lu %d %d\n", sol.nis[day][c0].size(), day == 0 ? -1 : sep_cnt[day - 1][c0][W],
+          //       day == D - 1 ? -1 : sep_cnt[day + 1][c0][W]);
           // debug("penas: %d %d %d %d %d\n", new_pena, pena_sep[day][c0], pena_sep[day + 1][c0], pena_area[day][c0], real_pena);
           assert((new_pena - real_pena) % 100 == 0); // 面積順ソートで改善することがあるので面積ペナルティのみずれる
           diff += real_pena - new_pena;
@@ -624,14 +644,8 @@ struct Solver {
         );
         diff += new_pena1;
         // clang-format on
-        if (type < type_th_swap) {
-          debug("diff_move:%d\n", diff);
-        } else {
-          debug("diff_swap:%d\n", diff);
-        }
-
         if (diff <= 0) {
-          // debug("day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
+          debug("move day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
           // debug_vec(new_hs, "hs");
           // debug_vec(sol.nis[day][c0]);
           sol.hss[day][c0] = new_hs0;
@@ -647,6 +661,12 @@ struct Solver {
                 pena_sep[day][c0] -= 2 * sol.ws[c0];
               }
             }
+            if (y < W) {
+              pena_sep[day][c0] += sol.ws[c0];
+            }
+            if (next_sep[day - 1][c0][W] == -1) {
+              pena_sep[day][c0] += sol.ws[c0];
+            }
             y = 0;
             for (int h : new_hs1) {
               y += h;
@@ -654,6 +674,12 @@ struct Solver {
               if (sep_cnt[day - 1][c1][y - 1] != sep_cnt[day - 1][c1][y]) {
                 pena_sep[day][c1] -= 2 * sol.ws[c1];
               }
+            }
+            if (y < W) {
+              pena_sep[day][c1] += sol.ws[c1];
+            }
+            if (next_sep[day - 1][c1][W] == -1) {
+              pena_sep[day][c1] += sol.ws[c1];
             }
           }
           if (day != D - 1) {
@@ -667,6 +693,12 @@ struct Solver {
                 pena_sep[day + 1][c0] -= 2 * sol.ws[c0];
               }
             }
+            if (y < W) {
+              pena_sep[day + 1][c0] += sol.ws[c0];
+            }
+            if (next_sep[day + 1][c0][W] == -1) {
+              pena_sep[day + 1][c0] += sol.ws[c0];
+            }
             y = 0;
             for (int h : new_hs1) {
               y += h;
@@ -674,6 +706,12 @@ struct Solver {
               if (sep_cnt[day + 1][c1][y - 1] != sep_cnt[day + 1][c1][y]) {
                 pena_sep[day + 1][c1] -= 2 * sol.ws[c1];
               }
+            }
+            if (y < W) {
+              pena_sep[day + 1][c1] += sol.ws[c1];
+            }
+            if (next_sep[day + 1][c1][W] == -1) {
+              pena_sep[day + 1][c1] += sol.ws[c1];
             }
           }
           sort(new_hs0.begin(), new_hs0.end());
@@ -718,19 +756,16 @@ struct Solver {
     }
     best_sol.pena_area = 0;
     best_sol.pena_wall = 0;
-    debug_vec(best_sol.ws, "ws");
     for (int i = 0; i < D; ++i) {
       best_sol.pena_area += accumulate(pena_area[i].begin(), pena_area[i].end(), 0);
       best_sol.pena_wall += accumulate(pena_sep[i].begin(), pena_sep[i].end(), 0);
-      // debug_vec(pena_sep[i]);
-      // debug("%d\n", accumulate(pena_sep[i].begin(), pena_sep[i].end(), 0));
     }
     debug("%lld %lld %lld %d\n", best_sol.pena_area, best_sol.pena_wall, best_sol.pena_area + best_sol.pena_wall, pena);
     assert(best_sol.pena_area + best_sol.pena_wall == pena);
     return best_sol;
   }
 
-  pair<int, vi> improve_col(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
+  pair<int, vi> improve_col(int day, vi& nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
                             const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after, int threshold) {
     if (nis.empty()) {
       return make_pair(INF, vi());
@@ -752,17 +787,26 @@ struct Solver {
     static vvi prev(N + 1, vi(W + 1, 0));
     dp[0][0] = 0;
     if (day != 0) {
-      dp[0][0] += (nis.size() - 1 + sep_cnt_before[W] - 1) * w;
+      dp[0][0] += (nis.size() + sep_cnt_before[W] - 1) * w;
+      if (next_sep_before[W] == -1) {
+        dp[0][0] += w;
+      }
     }
     if (day != D - 1) {
-      dp[0][0] += (nis.size() - 1 + sep_cnt_after[W] - 1) * w;
+      dp[0][0] += (nis.size() + sep_cnt_after[W] - 1) * w;
+      if (next_sep_after[W] == -1) {
+        dp[0][0] += w;
+      }
     }
     const int ub = threshold + dp[0][0];
-    // debug("ub:%d\n", ub);
     auto update_dp = [&](int i, int cy, int ny, int na, vi& next_vaild_pos) {
       int nv = dp[i][cy];
       int a = (ny - cy) * w;
       if (a < na) nv += (na - a) * 100;
+      if (ny == W) {
+        if (day != 0) nv -= w;
+        if (day != D - 1) nv -= w;
+      }
       if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
         nv -= w * 2;
       }
@@ -778,8 +822,9 @@ struct Solver {
       }
     };
 
-    vi valid_pos = {0};
-    vi next_valid_pos;
+    static vi valid_pos = {0};
+    static vi next_valid_pos;
+    valid_pos.assign(1, 0);
     for (int i = 0; i < nis.size(); ++i) {
       next_valid_pos.clear();
       int min_v = ub;
@@ -794,9 +839,9 @@ struct Solver {
         if (jy < W) {
           update_dp(i, y, jy, A[day][ai], next_valid_pos);
           int ny = W;
-          if (day != 0) ny = next_sep_before[jy];
-          if (day != D - 1) ny = min(ny, next_sep_after[jy]);
-          update_dp(i, y, ny, A[day][ai], next_valid_pos);
+          if (day != 0 && next_sep_before[jy] != -1) ny = next_sep_before[jy];
+          if (day != D - 1 && next_sep_after[jy] != -1) ny = min(ny, next_sep_after[jy]);
+          if (ny != W) update_dp(i, y, ny, A[day][ai], next_valid_pos);
         }
         if (jy != y + 1 && jy - 1 < W) {
           update_dp(i, y, jy - 1, A[day][ai], next_valid_pos);
@@ -817,104 +862,123 @@ struct Solver {
       sort(valid_pos.begin(), valid_pos.end());
     }
     int ret = dp[nis.size()][W];
-    for (int y : valid_pos) {
-      dp[nis.size()][y] = INF;
+    int best_y = W;
+    if ((day == 0 || next_sep_before[W] == W) && ((day == D - 1 || next_sep_after[W] == W))) {
+      // Wまで使うのが最適でないケースを考慮
+      // debug("ret:%d\n", ret);
+      for (int y : valid_pos) {
+        if (dp[nis.size()][y] < ret) {
+          // debug("y:%d v:%d\n", y, dp[nis.size()][y]);
+          best_y = y;
+          ret = dp[nis.size()][y];
+        }
+        dp[nis.size()][y] = INF;
+      }
+    } else {
+      for (int y : valid_pos) {
+        dp[nis.size()][y] = INF;
+      }
     }
-    int y = W; // TODO: Wが最適でないケースを考慮
+    if (ret >= ub) {
+      return make_pair(ret, vi());
+    }
+    if (best_y != W) {
+      debug("best_y:%d\n", best_y);
+    }
     int i = nis.size();
     vi hs;
-    while (y != 0) {
-      int py = prev[i][y];
-      hs.push_back(y - py);
-      y = py;
+    while (best_y != 0) {
+      int py = prev[i][best_y];
+      hs.push_back(best_y - py);
+      best_y = py;
       i--;
     }
     reverse(hs.begin(), hs.end());
     return make_pair(ret, hs);
   }
 
-  pair<int, vi> improve_col_dp(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
-                               const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after) {
-    static vvi dp(1 << 6, vi(W + 1, INF));
-    static vvi prev(1 << 6, vi(W + 1, 0));
-    static vector<uint64_t> valid(W + 1);
-    fill(valid.begin(), valid.end(), 0ull);
-    valid[0] = 1;
-    for (int i = 1; i < (1 << nis.size()); ++i) {
-      fill(dp[i].begin(), dp[i].end(), INF);
-    }
-    dp[0][0] = 0;
-    if (day != 0) {
-      dp[0][0] += (nis.size() - 1 + sep_cnt_before[W] - 1) * w;
-    }
-    if (day != D - 1) {
-      dp[0][0] += (nis.size() - 1 + sep_cnt_after[W] - 1) * w;
-    }
-    auto update_dp = [&](int cur_used, int new_used, int cy, int ny, int na) {
-      int nv = dp[cur_used][cy];
-      int a = (ny - cy) * w;
-      if (a < na) nv += (na - a) * 100;
-      if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
-        nv -= w * 2;
-      }
-      if (day != D - 1 && ny != W && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
-        nv -= w * 2;
-      }
-      if (nv < dp[new_used][ny]) {
-        dp[new_used][ny] = nv;
-        prev[new_used][ny] = (cy << 6) | cur_used;
-        valid[ny] |= 1ull << new_used;
-      }
-    };
+  // pair<int, vi> improve_col_dp(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
+  //                              const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after) {
+  //   static vvi dp(1 << 6, vi(W + 1, INF));
+  //   static vvi prev(1 << 6, vi(W + 1, 0));
+  //   static vector<uint64_t> valid(W + 1);
+  //   fill(valid.begin(), valid.end(), 0ull);
+  //   valid[0] = 1;
+  //   for (int i = 1; i < (1 << nis.size()); ++i) {
+  //     fill(dp[i].begin(), dp[i].end(), INF);
+  //   }
+  //   dp[0][0] = 0;
+  //   if (day != 0) {
+  //     dp[0][0] += (nis.size() - 1 + sep_cnt_before[W] - 1) * w;
+  //   }
+  //   if (day != D - 1) {
+  //     dp[0][0] += (nis.size() - 1 + sep_cnt_after[W] - 1) * w;
+  //   }
+  //   auto update_dp = [&](int cur_used, int new_used, int cy, int ny, int na) {
+  //     int nv = dp[cur_used][cy];
+  //     int a = (ny - cy) * w;
+  //     if (a < na) nv += (na - a) * 100;
+  //     if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
+  //       nv -= w * 2;
+  //     }
+  //     if (day != D - 1 && ny != W && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
+  //       nv -= w * 2;
+  //     }
+  //     if (nv < dp[new_used][ny]) {
+  //       dp[new_used][ny] = nv;
+  //       prev[new_used][ny] = (cy << 6) | cur_used;
+  //       valid[ny] |= 1ull << new_used;
+  //     }
+  //   };
 
-    const int ni_mask = (1 << nis.size()) - 1;
-    for (int y = 0; y < W; ++y) {
-      int v = valid[y];
-      while (v) {
-        int used = __builtin_ctzll(v);
-        v &= v - 1;
-        int cands = used ^ ni_mask;
-        while (cands) {
-          int ni = __builtin_ctz(cands);
-          int ai = nis[ni];
-          int ns = used | (1 << ni);
-          cands &= cands - 1;
-          int jy = y + (A[day][ai] + w - 1) / w;
-          if (jy < W) {
-            update_dp(used, ns, y, jy, A[day][ai]);
-            int ny = W;
-            if (day != 0) ny = next_sep_before[jy];
-            if (day != D - 1) ny = min(ny, next_sep_after[jy]);
-            update_dp(used, ns, y, ny, A[day][ai]);
-          }
-          if (jy != y + 1 && jy - 1 < W) {
-            update_dp(used, ns, y, jy - 1, A[day][ai]);
-          }
-          update_dp(used, ns, y, W, A[day][ai]);
-          jy = min(jy, W);
-          int py = 0;
-          if (day != 0) py = prev_sep_before[jy];
-          if (day != D - 1) py = max(py, prev_sep_after[jy]);
-          if (py > y) {
-            update_dp(used, ns, y, py, A[day][ai]);
-          }
-        }
-      }
-    }
-    int y = W; // TODO: Wが最適でないケースを考慮
-    vi hs;
-    int used = ni_mask;
-    while (y != 0) {
-      int py = prev[used][y];
-      used = py & ni_mask;
-      py >>= 6;
-      hs.push_back(y - py);
-      y = py;
-    }
-    assert(used == 0);
-    reverse(hs.begin(), hs.end());
-    return make_pair(dp[ni_mask][W], hs);
-  }
+  //   const int ni_mask = (1 << nis.size()) - 1;
+  //   for (int y = 0; y < W; ++y) {
+  //     int v = valid[y];
+  //     while (v) {
+  //       int used = __builtin_ctzll(v);
+  //       v &= v - 1;
+  //       int cands = used ^ ni_mask;
+  //       while (cands) {
+  //         int ni = __builtin_ctz(cands);
+  //         int ai = nis[ni];
+  //         int ns = used | (1 << ni);
+  //         cands &= cands - 1;
+  //         int jy = y + (A[day][ai] + w - 1) / w;
+  //         if (jy < W) {
+  //           update_dp(used, ns, y, jy, A[day][ai]);
+  //           int ny = W;
+  //           if (day != 0) ny = next_sep_before[jy];
+  //           if (day != D - 1) ny = min(ny, next_sep_after[jy]);
+  //           update_dp(used, ns, y, ny, A[day][ai]);
+  //         }
+  //         if (jy != y + 1 && jy - 1 < W) {
+  //           update_dp(used, ns, y, jy - 1, A[day][ai]);
+  //         }
+  //         update_dp(used, ns, y, W, A[day][ai]);
+  //         jy = min(jy, W);
+  //         int py = 0;
+  //         if (day != 0) py = prev_sep_before[jy];
+  //         if (day != D - 1) py = max(py, prev_sep_after[jy]);
+  //         if (py > y) {
+  //           update_dp(used, ns, y, py, A[day][ai]);
+  //         }
+  //       }
+  //     }
+  //   }
+  //   int y = W; // TODO: Wが最適でないケースを考慮
+  //   vi hs;
+  //   int used = ni_mask;
+  //   while (y != 0) {
+  //     int py = prev[used][y];
+  //     used = py & ni_mask;
+  //     py >>= 6;
+  //     hs.push_back(y - py);
+  //     y = py;
+  //   }
+  //   assert(used == 0);
+  //   reverse(hs.begin(), hs.end());
+  //   return make_pair(dp[ni_mask][W], hs);
+  // }
 
   vi distribute_len(const vector<double>& ratio, int width) {
     double r_sum = accumulate(ratio.begin(), ratio.end(), 0.0);
