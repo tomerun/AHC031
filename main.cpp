@@ -220,9 +220,8 @@ struct FreeSolution {
   vector<vector<Rect>> rects;
   vector<int64_t> pena_area;
   vector<int64_t> pena_wall;
-  FreeSolution() : rects(D), pena_area(D, INF), pena_wall(D, INF) {}
-  FreeSolution(const vector<vector<Rect>>& rects_, vector<int64_t> pena_area_, vector<int64_t> pena_wall_)
-      : rects(rects_), pena_area(pena_area_), pena_wall(pena_wall_) {}
+  vvi wss;
+  FreeSolution() : rects(D), pena_area(D, INF), pena_wall(D, INF), wss(D, vi(1, W)) {}
 
   int64_t score() const { return sum_pena_area() + sum_pena_wall() + 1; }
 
@@ -236,6 +235,7 @@ struct FreeSolution {
     for (int i = 0; i < D; ++i) {
       sum += pena_area[i] + pena_wall[i];
       debug("day:%d pena_area:%lld pena_wall:%lld sum:%lld\n", i, pena_area[i], pena_wall[i], sum);
+      debug_vec(wss[i]);
     }
     return Result(rects, sum_pena_area(), sum_pena_wall(), -1);
   }
@@ -1261,11 +1261,27 @@ struct Solver {
     }
   }
 
-  void solve_noarea_day(FreeSolution& sol, int day, int col, int turn) {
-    vector<double> ratio(col);
-    for (int i = 0; i < col; ++i) {
-      ratio[i] = rnd.next(5.0) + 1.0;
+  int count_match(const vi& ws0, const vi& ws1) {
+    int p0 = 1;
+    int p1 = 1;
+    int x0 = ws0[0];
+    int x1 = ws1[0];
+    int match = 0;
+    while (x0 < W && x1 < W) {
+      if (x0 < x1) {
+        x0 += ws0[p0++];
+      } else if (x0 > x1) {
+        x1 += ws1[p1++];
+      } else {
+        match++;
+        x0 += ws0[p0++];
+        x1 += ws1[p1++];
+      }
     }
+    return match;
+  }
+
+  void solve_noarea_day(FreeSolution& sol, int day, int col, int turn) {
     vi ws;
     vvi nis;
     if (col == 1) {
@@ -1273,16 +1289,33 @@ struct Solver {
       nis.push_back(vi(N));
       iota(nis[0].begin(), nis[0].end(), 0);
     } else {
+      vector<double> ratio(col);
+      for (int i = 0; i < col; ++i) {
+        ratio[i] = rnd.next(5.0) + 1.0;
+      }
       ws = distribute_len(ratio, W);
       nis = distribute_area(ws, vi(A[day].begin(), A[day].begin() + N));
     }
     auto [hss, pena_area, pena_wall] = pack_columns(day, nis, ws);
     pena_wall += W * (col - 1) * (day != 0 && day != D - 1 ? 2 : 1);
-    if (pena_area + pena_wall < sol.pena_area[day] + sol.pena_wall[day]) {
+    int match_p0 = day == 0 ? 0 : count_match(sol.wss[day], sol.wss[day - 1]);
+    int match_n0 = day == D - 1 ? 0 : count_match(sol.wss[day], sol.wss[day + 1]);
+    int match_p1 = day == 0 ? 0 : count_match(ws, sol.wss[day - 1]);
+    int match_n1 = day == D - 1 ? 0 : count_match(ws, sol.wss[day + 1]);
+    pena_wall -= (match_p1 + match_n1) * W;
+    int adj_diff = (match_p0 + match_n0 - match_p1 - match_n1) * W;
+    if (pena_area + pena_wall + adj_diff < sol.pena_area[day] + sol.pena_wall[day]) {
       debug("turn:%d day:%d col:%d pena_area:%lld->%d pena_wall:%lld->%d pena_sum:%lld->%d\n", turn, day, col, sol.pena_area[day],
             pena_area, sol.pena_wall[day], pena_wall, sol.pena_area[day] + sol.pena_wall[day], pena_area + pena_wall);
       sol.pena_area[day] = pena_area;
       sol.pena_wall[day] = pena_wall;
+      if (day != 0) {
+        sol.pena_wall[day - 1] += (match_p0 - match_p1) * W;
+      }
+      if (day != D - 1) {
+        sol.pena_wall[day + 1] += (match_n0 - match_n1) * W;
+      }
+      sol.wss[day] = ws;
       sol.rects[day].clear();
       int x = 0;
       for (int i = 0; i < col; ++i) {
