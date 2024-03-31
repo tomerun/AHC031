@@ -349,7 +349,6 @@ struct Solver {
   }
 
   void set_sep_info(const vi& hs, vi& sep_cnt, vi& prev_sep, vi& next_sep) {
-    START_TIMER(4);
     fill(sep_cnt.begin(), sep_cnt.end(), 0);
     int y = 0;
     for (int h : hs) {
@@ -372,7 +371,6 @@ struct Solver {
     for (int i = 0; i < W; ++i) {
       sep_cnt[i + 1] += sep_cnt[i];
     }
-    STOP_TIMER(4);
   }
 
   FixColumnSolution improve(FixColumnSolution& sol, int64_t tl) {
@@ -813,12 +811,13 @@ struct Solver {
       if (ny == W) {
         if (day != 0) nv -= w;
         if (day != D - 1) nv -= w;
-      }
-      if (day != 0 && ny != W && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
-        nv -= w * 2;
-      }
-      if (day != D - 1 && ny != W && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
-        nv -= w * 2;
+      } else {
+        if (day != 0 && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
+          nv -= w * 2;
+        }
+        if (day != D - 1 && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
+          nv -= w * 2;
+        }
       }
       if (nv < dp[i + 1][ny] && nv < ub) {
         if (dp[i + 1][ny] == INF) {
@@ -829,7 +828,7 @@ struct Solver {
       }
     };
 
-    static vi valid_pos = {0};
+    static vi valid_pos;
     static vi next_valid_pos;
     valid_pos.assign(1, 0);
     for (int i = 0; i < nis.size(); ++i) {
@@ -869,6 +868,9 @@ struct Solver {
       sort(valid_pos.begin(), valid_pos.end());
     }
     int ret = dp[nis.size()][W];
+    if (ret >= ub) {
+      return make_pair(ret, vi());
+    }
     int best_y = W;
     if ((day == 0 || next_sep_before[W] == W) && ((day == D - 1 || next_sep_after[W] == W))) {
       // Wまで使うのが最適でないケースを考慮
@@ -883,12 +885,6 @@ struct Solver {
       for (int y : valid_pos) {
         dp[nis.size()][y] = INF;
       }
-    }
-    if (ret >= ub) {
-      return make_pair(ret, vi());
-    }
-    if (best_y != W) {
-      debug("best_y:%d\n", best_y);
     }
     int i = nis.size();
     vi hs;
@@ -1396,7 +1392,7 @@ struct Solver {
         best_ws = ws;
         swap(best_nis, nis);
         swap(best_hss, hss);
-        debug("2 pena_area:%d pena_wall:%d col:%d t:%d\n", best_pena_area, best_pena_wall, col, t);
+        debug("pena_area:%d pena_wall:%d col:%d t:%d\n", best_pena_area, best_pena_wall, col, t);
       }
     }
     debug("solve_noarea_fixed_column:%d %d %d\n", best_pena_area + best_pena_wall, best_pena_area, best_pena_wall);
