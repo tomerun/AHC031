@@ -425,6 +425,24 @@ struct Solver {
         debug("turn:%d\n", turn);
         break;
       }
+
+      if (turn & 0x3FFF == 0) {
+        for (int day = 0; day < D; ++day) {
+          vector<pair<int, int>> as;
+          for (int i = 0; i < col; ++i) {
+            for (int h : sol.hss[day][i]) {
+              as.emplace_back(h * sol.ws[i], i);
+            }
+          }
+          sort(as.begin(), as.end());
+          vvi snis(col);
+          for (int i = 0; i < N; ++i) {
+            snis[as[i].second].push_back(i);
+          }
+          sol.nis[day] = snis;
+        }
+      }
+
       int c0 = rnd.next(col);
       int c1;
       if (col == 1) {
@@ -470,6 +488,7 @@ struct Solver {
             }
           }
         }
+        // debug("diff width:%d\n", diff);
         if (diff <= 0) {
           pena += diff;
           for (day = 0; day < D; ++day) {
@@ -524,6 +543,7 @@ struct Solver {
           continue;
         }
         diff += new_pena;
+        // debug("diff shuffle:%d\n", diff);
         if (diff <= 0) {
           debug("shuffle day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
           sol.hss[day][c0] = new_hs;
@@ -660,8 +680,13 @@ struct Solver {
           day == D - 1 ? EMPTY_VI : next_sep[day + 1][c1],
           -diff
         );
-        diff += new_pena1;
         // clang-format on
+        diff += new_pena1;
+        // if (type < type_th_swap) {
+        //   debug("diff swap:%d\n", diff);
+        // } else {
+        //   debug("diff move:%d\n", diff);
+        // }
         if (diff <= 0) {
           debug("move day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
           sol.hss[day][c0] = new_hs0;
