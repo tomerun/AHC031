@@ -324,7 +324,7 @@ struct Solver {
     START_TIMER(2);
     // 縦の壁だけ固定して面積ペナルティを最小化しようとする解
     ll time_left = timelimit - get_time();
-    FixColumnSolution noarea_fix_sol = solve_noarea_fixed_column(get_time() + time_left / 3);
+    FixColumnSolution noarea_fix_sol = solve_noarea_fixed_column(get_time() + time_left * 6 / 10);
     STOP_TIMER(2);
     int col = noarea_fix_sol.ws.size();
     debug("fix_col:%d\n", col);
@@ -469,10 +469,12 @@ struct Solver {
     int pena = sol.pena_area + sol.pena_wall;
     const int type_th_swap = 0x2F;
     for (int turn = 0;; ++turn) {
-      auto cur_time = get_time();
-      if (tl < cur_time) {
-        debug("turn:%d\n", turn);
-        break;
+      if ((turn & 0xFF) == 0) {
+        auto cur_time = get_time();
+        if (tl < cur_time) {
+          debug("turn:%d\n", turn);
+          break;
+        }
       }
 
       if ((turn & 0x3FFF) == 0) {
@@ -1270,9 +1272,10 @@ struct Solver {
     vvvi best_hss(D);
     vvvi nis(D);
     vvvi hss(D);
+    ll time_budget = tl - get_time();
     const int max_col = (N + 3) / 2;
     for (int t = 0;; ++t) {
-      if (get_time() > tl - TL / 8) break;
+      if (get_time() > tl - time_budget / 2) break;
       int lo_col = t < 10 ? 2 : max(2, (int)best_ws.size() - 1);
       int hi_col = t < 10 ? max_col : best_ws.size() + 1;
       for (int col = lo_col; col <= hi_col; ++col) {
