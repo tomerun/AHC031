@@ -397,12 +397,12 @@ struct Solver {
           y += sol.hss[i][j][k];
           if (y == W) continue;
           if (i != 0) {
-            if (has_sep[i - 1][j][y - 1] == has_sep[i - 1][j][y]) {
+            if (!has_sep[i - 1][j][y]) {
               pena_sep[i][j] += sol.ws[j];
             }
           }
           if (i != D - 1) {
-            if (has_sep[i + 1][j][y - 1] == has_sep[i + 1][j][y]) {
+            if (!has_sep[i + 1][j][y]) {
               pena_sep[i + 1][j] += sol.ws[j];
             }
           }
