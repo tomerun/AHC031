@@ -348,43 +348,42 @@ struct Solver {
     return best_result;
   }
 
-  void set_sep_info(const vi& hs, vi& sep_cnt, vi& prev_sep, vi& next_sep) {
-    fill(sep_cnt.begin(), sep_cnt.end(), 0);
+  void set_sep_info(const vi& hs, vi& has_sep, vi& prev_sep, vi& next_sep, int& sep_cnt) {
+    fill(has_sep.begin(), has_sep.end(), 0);
+    sep_cnt = hs.size();
     int y = 0;
     for (int h : hs) {
       y += h;
-      sep_cnt[y]++;
+      has_sep[y]++;
     }
+    if (y == W) sep_cnt--;
     if (hs.empty()) {
-      sep_cnt[W] = 1;
+      has_sep[W] = 1;
     }
-    // sep_cnt[W] = 1; // Wまで詰めないケースを考慮
     int prev = 0;
-    int next = sep_cnt[W] == 1 ? W : -1;
+    int next = has_sep[W] ? W : -1;
     next_sep[W] = next;
     for (int i = 1; i <= W; ++i) {
       prev_sep[i] = prev;
-      if (sep_cnt[i]) prev = i;
+      if (has_sep[i]) prev = i;
       next_sep[W - i] = next;
-      if (sep_cnt[W - i]) next = W - i;
-    }
-    for (int i = 0; i < W; ++i) {
-      sep_cnt[i + 1] += sep_cnt[i];
+      if (has_sep[W - i]) next = W - i;
     }
   }
 
   FixColumnSolution improve(FixColumnSolution& sol, int64_t tl) {
     const int col = sol.ws.size();
     debug("start improve col:%d\n", col);
-    vvvi sep_cnt(D, vvi(col, vi(W + 1)));
+    vvvi has_sep(D, vvi(col, vi(W + 1)));
     vvvi prev_sep(D, vvi(col, vi(W + 1)));
     vvvi next_sep(D, vvi(col, vi(W + 1)));
+    vvi sep_cnt(D, vi(col));
     vvi pena_sep(D + 1, vi(col));
     vvi pena_area(D, vi(col));
     for (int i = 0; i < D; ++i) {
       for (int j = 0; j < col; ++j) {
         sort(sol.nis[i][j].begin(), sol.nis[i][j].end());
-        set_sep_info(sol.hss[i][j], sep_cnt[i][j], prev_sep[i][j], next_sep[i][j]);
+        set_sep_info(sol.hss[i][j], has_sep[i][j], prev_sep[i][j], next_sep[i][j], sep_cnt[i][j]);
       }
     }
     for (int i = 0; i < D; ++i) {
@@ -398,12 +397,12 @@ struct Solver {
           y += sol.hss[i][j][k];
           if (y == W) continue;
           if (i != 0) {
-            if (sep_cnt[i - 1][j][y - 1] == sep_cnt[i - 1][j][y]) {
+            if (has_sep[i - 1][j][y - 1] == has_sep[i - 1][j][y]) {
               pena_sep[i][j] += sol.ws[j];
             }
           }
           if (i != D - 1) {
-            if (sep_cnt[i + 1][j][y - 1] == sep_cnt[i + 1][j][y]) {
+            if (has_sep[i + 1][j][y - 1] == has_sep[i + 1][j][y]) {
               pena_sep[i + 1][j] += sol.ws[j];
             }
           }
@@ -421,12 +420,12 @@ struct Solver {
     auto update_col = [&](int day, int c) {
       vi new_hs = sol.hss[day][c];
       if (day != 0) {
-        pena_sep[day][c] = (sol.nis[day][c].size() + sep_cnt[day - 1][c][W] - 2) * sol.ws[c];
+        pena_sep[day][c] = (sol.nis[day][c].size() + sep_cnt[day - 1][c] - 1) * sol.ws[c];
         int y = 0;
         for (int h : new_hs) {
           y += h;
           if (y == W) break;
-          if (sep_cnt[day - 1][c][y - 1] != sep_cnt[day - 1][c][y]) {
+          if (has_sep[day - 1][c][y]) {
             pena_sep[day][c] -= 2 * sol.ws[c];
           }
         }
@@ -438,12 +437,12 @@ struct Solver {
         }
       }
       if (day != D - 1) {
-        pena_sep[day + 1][c] = (sol.nis[day][c].size() + sep_cnt[day + 1][c][W] - 2) * sol.ws[c];
+        pena_sep[day + 1][c] = (sol.nis[day][c].size() + sep_cnt[day + 1][c] - 1) * sol.ws[c];
         int y = 0;
         for (int h : new_hs) {
           y += h;
           if (y == W) break;
-          if (sep_cnt[day + 1][c][y - 1] != sep_cnt[day + 1][c][y]) {
+          if (has_sep[day + 1][c][y]) {
             pena_sep[day + 1][c] -= 2 * sol.ws[c];
           }
         }
@@ -463,7 +462,7 @@ struct Solver {
           pena_area[day][c] += area_diff * 100;
         }
       }
-      set_sep_info(sol.hss[day][c], sep_cnt[day][c], prev_sep[day][c], next_sep[day][c]);
+      set_sep_info(sol.hss[day][c], has_sep[day][c], prev_sep[day][c], next_sep[day][c], sep_cnt[day][c]);
     };
 
     FixColumnSolution best_sol = sol;
@@ -581,27 +580,33 @@ struct Solver {
           EMPTY_VI,
           EMPTY_VI,
           EMPTY_VI,
-          sep_cnt[day + 1][c0],
+          0,
+          has_sep[day + 1][c0],
           prev_sep[day + 1][c0],
           next_sep[day + 1][c0],
+          sep_cnt[day + 1][c0],
           -diff
         ) : day == D - 1 ? improve_col<false, true>(
           day, sol.nis[day][c0], sol.ws[c0],
-          sep_cnt[day - 1][c0],
+          has_sep[day - 1][c0],
           prev_sep[day - 1][c0],
           next_sep[day - 1][c0],
+          sep_cnt[day - 1][c0],
           EMPTY_VI,
           EMPTY_VI,
           EMPTY_VI,
+          0,
           -diff
         ) : improve_col<false, false>(
           day, sol.nis[day][c0], sol.ws[c0],
-          sep_cnt[day - 1][c0],
+          has_sep[day - 1][c0],
           prev_sep[day - 1][c0],
           next_sep[day - 1][c0],
-          sep_cnt[day + 1][c0],
+          sep_cnt[day - 1][c0],
+          has_sep[day + 1][c0],
           prev_sep[day + 1][c0],
           next_sep[day + 1][c0],
+          sep_cnt[day + 1][c0],
           -diff
         );
         // clang-format on
@@ -672,27 +677,33 @@ struct Solver {
           EMPTY_VI,
           EMPTY_VI,
           EMPTY_VI,
-          sep_cnt[day + 1][c0],
+          0,
+          has_sep[day + 1][c0],
           prev_sep[day + 1][c0],
           next_sep[day + 1][c0],
+          sep_cnt[day + 1][c0],
           -diff
         ) : day == D - 1 ? improve_col<false, true>(
           day, sol.nis[day][c0], sol.ws[c0],
-          sep_cnt[day - 1][c0],
+          has_sep[day - 1][c0],
           prev_sep[day - 1][c0],
           next_sep[day - 1][c0],
+          sep_cnt[day - 1][c0],
           EMPTY_VI,
           EMPTY_VI,
           EMPTY_VI,
+          0,
           -diff
         ) : improve_col<false, false>(
           day, sol.nis[day][c0], sol.ws[c0],
-          sep_cnt[day - 1][c0],
+          has_sep[day - 1][c0],
           prev_sep[day - 1][c0],
           next_sep[day - 1][c0],
-          sep_cnt[day + 1][c0],
+          sep_cnt[day - 1][c0],
+          has_sep[day + 1][c0],
           prev_sep[day + 1][c0],
           next_sep[day + 1][c0],
+          sep_cnt[day + 1][c0],
           -diff
         );
         diff += new_pena0;
@@ -713,27 +724,33 @@ struct Solver {
           EMPTY_VI,
           EMPTY_VI,
           EMPTY_VI,
-          sep_cnt[day + 1][c1],
+          0,
+          has_sep[day + 1][c1],
           prev_sep[day + 1][c1],
           next_sep[day + 1][c1],
+          sep_cnt[day + 1][c1],
           -diff
         ) : day == D - 1 ? improve_col<false, true>(
           day, sol.nis[day][c1], sol.ws[c1],
-          sep_cnt[day - 1][c1],
+          has_sep[day - 1][c1],
           prev_sep[day - 1][c1],
           next_sep[day - 1][c1],
+          sep_cnt[day - 1][c1],
           EMPTY_VI,
           EMPTY_VI,
           EMPTY_VI,
+          0,
           -diff
         ) : improve_col<false, false>(
           day, sol.nis[day][c1], sol.ws[c1],
-          sep_cnt[day - 1][c1],
+          has_sep[day - 1][c1],
           prev_sep[day - 1][c1],
           next_sep[day - 1][c1],
-          sep_cnt[day + 1][c1],
+          sep_cnt[day - 1][c1],
+          has_sep[day + 1][c1],
           prev_sep[day + 1][c1],
           next_sep[day + 1][c1],
+          sep_cnt[day + 1][c1],
           -diff
         );
         // clang-format on
@@ -781,8 +798,9 @@ struct Solver {
   }
 
   template <bool day0, bool dayD>
-  pair<int, vi> improve_col(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
-                            const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after, int threshold) {
+  pair<int, vi> improve_col(int day, vi nis, int w, const vi& has_sep_before, const vi& prev_sep_before, const vi& next_sep_before,
+                            int sep_cnt_before, const vi& has_sep_after, const vi& prev_sep_after, const vi& next_sep_after,
+                            int sep_cnt_after, int threshold) {
     if (nis.empty()) {
       return make_pair(INF, vi());
     }
@@ -791,13 +809,13 @@ struct Solver {
     static vvi prev(N + 1, vi(W + 1, 0));
     dp[0][0] = 0;
     if (!day0) {
-      dp[0][0] += (nis.size() + sep_cnt_before[W] - 1) * w;
+      dp[0][0] += (nis.size() + sep_cnt_before) * w;
       if (next_sep_before[W] == -1) {
         dp[0][0] += w;
       }
     }
     if (!dayD) {
-      dp[0][0] += (nis.size() + sep_cnt_after[W] - 1) * w;
+      dp[0][0] += (nis.size() + sep_cnt_after) * w;
       if (next_sep_after[W] == -1) {
         dp[0][0] += w;
       }
@@ -811,10 +829,10 @@ struct Solver {
         if (!day0) nv -= w;
         if (!dayD) nv -= w;
       } else {
-        if (!day0 && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
+        if (!day0 && has_sep_before[ny]) {
           nv -= w * 2;
         }
-        if (!dayD && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
+        if (!dayD && has_sep_after[ny]) {
           nv -= w * 2;
         }
       }
