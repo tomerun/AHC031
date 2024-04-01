@@ -426,7 +426,7 @@ struct Solver {
         break;
       }
 
-      if (turn & 0x3FFF == 0) {
+      if ((turn & 0x3FFF) == 0) {
         for (int day = 0; day < D; ++day) {
           vector<pair<int, int>> as;
           for (int i = 0; i < col; ++i) {
