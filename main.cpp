@@ -196,6 +196,7 @@ bool operator<(const Rect& r1, const Rect& r2) { return r1.area() < r2.area(); }
 constexpr int INF = 1 << 29;
 constexpr int W = 1000;
 constexpr vi EMPTY_VI;
+constexpr vvi EMPTY_VVI;
 int D;
 int N;
 double E;
@@ -416,6 +417,55 @@ struct Solver {
       sol.pena_wall += accumulate(pena_sep[i].begin(), pena_sep[i].end(), 0);
     }
     debug("pena_area:%lld pena_wall:%lld\n", sol.pena_area, sol.pena_wall);
+
+    auto update_col = [&](int day, int c) {
+      vi new_hs = sol.hss[day][c];
+      if (day != 0) {
+        pena_sep[day][c] = (sol.nis[day][c].size() + sep_cnt[day - 1][c][W] - 2) * sol.ws[c];
+        int y = 0;
+        for (int h : new_hs) {
+          y += h;
+          if (y == W) break;
+          if (sep_cnt[day - 1][c][y - 1] != sep_cnt[day - 1][c][y]) {
+            pena_sep[day][c] -= 2 * sol.ws[c];
+          }
+        }
+        if (y < W) {
+          pena_sep[day][c] += sol.ws[c];
+        }
+        if (next_sep[day - 1][c][W] == -1) {
+          pena_sep[day][c] += sol.ws[c];
+        }
+      }
+      if (day != D - 1) {
+        pena_sep[day + 1][c] = (sol.nis[day][c].size() + sep_cnt[day + 1][c][W] - 2) * sol.ws[c];
+        int y = 0;
+        for (int h : new_hs) {
+          y += h;
+          if (y == W) break;
+          if (sep_cnt[day + 1][c][y - 1] != sep_cnt[day + 1][c][y]) {
+            pena_sep[day + 1][c] -= 2 * sol.ws[c];
+          }
+        }
+        if (y < W) {
+          pena_sep[day + 1][c] += sol.ws[c];
+        }
+        if (next_sep[day + 1][c][W] == -1) {
+          pena_sep[day + 1][c] += sol.ws[c];
+        }
+      }
+      sort(new_hs.begin(), new_hs.end());
+      sort(sol.nis[day][c].begin(), sol.nis[day][c].end());
+      pena_area[day][c] = 0;
+      for (int i = 0; i < sol.nis[day][c].size(); ++i) {
+        int area_diff = A[day][sol.nis[day][c][i]] - new_hs[i] * sol.ws[c];
+        if (area_diff > 0) {
+          pena_area[day][c] += area_diff * 100;
+        }
+      }
+      set_sep_info(sol.hss[day][c], sep_cnt[day][c], prev_sep[day][c], next_sep[day][c]);
+    };
+
     FixColumnSolution best_sol = sol;
     int pena = sol.pena_area + sol.pena_wall;
     const int type_th_swap = 0x2F;
@@ -520,6 +570,83 @@ struct Solver {
             debug("best_sol change_width:%d turn:%d\n", pena, turn);
           }
         }
+        // } else if (type < 0xFFFF) {
+        //   // 1日分割り当て直し
+        //   // clang-format off
+        //   auto [new_pena, new_hss, new_nis] = improve_day(
+        //     day,
+        //     sol,
+        //     day == 0 ? EMPTY_VVI : sep_cnt[day - 1],
+        //     day == 0 ? EMPTY_VVI : prev_sep[day - 1],
+        //     day == 0 ? EMPTY_VVI : next_sep[day - 1],
+        //     day == D - 1 ? EMPTY_VVI : sep_cnt[day + 1],
+        //     day == D - 1 ? EMPTY_VVI : prev_sep[day + 1],
+        //     day == D - 1 ? EMPTY_VVI : next_sep[day + 1],
+        //   );
+        //   // clang-format on
+        //   for (int i = 0; i < col; ++i) {
+        //     diff -= pena_area[day][i];
+        //     diff -= pena_sep[day][i];
+        //     diff -= pena_sep[day + 1][i];
+        //   }
+        //   diff += new_pena;
+        //   debug("diff whole_day:%d %d\n", diff, day);
+        //   if (diff <= 0) {
+        //     sol.hss[day] = new_hss;
+        //     sol.nis[day] = new_nis;
+        //     if (day != 0) {
+        //       pena_sep[day][c0] = (sol.nis[day][c0].size() + sep_cnt[day - 1][c0][W] - 2) * sol.ws[c0];
+        //       int y = 0;
+        //       for (int h : new_hs) {
+        //         y += h;
+        //         if (y == W) break;
+        //         if (sep_cnt[day - 1][c0][y - 1] != sep_cnt[day - 1][c0][y]) {
+        //           pena_sep[day][c0] -= 2 * sol.ws[c0];
+        //         }
+        //       }
+        //       if (y < W) {
+        //         pena_sep[day][c0] += sol.ws[c0];
+        //       }
+        //       if (next_sep[day - 1][c0][W] == -1) {
+        //         pena_sep[day][c0] += sol.ws[c0];
+        //       }
+        //     }
+        //     if (day != D - 1) {
+        //       pena_sep[day + 1][c0] = (sol.nis[day][c0].size() + sep_cnt[day + 1][c0][W] - 2) * sol.ws[c0];
+        //       int y = 0;
+        //       for (int h : new_hs) {
+        //         y += h;
+        //         if (y == W) break;
+        //         if (sep_cnt[day + 1][c0][y - 1] != sep_cnt[day + 1][c0][y]) {
+        //           pena_sep[day + 1][c0] -= 2 * sol.ws[c0];
+        //         }
+        //       }
+        //       if (y < W) {
+        //         pena_sep[day + 1][c0] += sol.ws[c0];
+        //       }
+        //       if (next_sep[day + 1][c0][W] == -1) {
+        //         pena_sep[day + 1][c0] += sol.ws[c0];
+        //       }
+        //     }
+        //     sort(new_hs.begin(), new_hs.end());
+        //     pena_area[day][c0] = 0;
+        //     for (int i = 0; i < sol.nis[day][c0].size(); ++i) {
+        //       int area_diff = A[day][sol.nis[day][c0][i]] - new_hs[i] * sol.ws[c0];
+        //       if (area_diff > 0) {
+        //         pena_area[day][c0] += area_diff * 100;
+        //       }
+        //     }
+        //     set_sep_info(sol.hss[day][c0], sep_cnt[day][c0], prev_sep[day][c0], next_sep[day][c0]);
+        //     int real_pena = pena_sep[day][c0] + pena_sep[day + 1][c0] + pena_area[day][c0];
+        //     // debug("penas: %d %d %d %d %d\n", new_pena, pena_sep[day][c0], pena_sep[day + 1][c0], pena_area[day][c0], real_pena);
+        //     assert((new_pena - real_pena) % 100 == 0); // 面積順ソートで改善することがあるので面積ペナルティのみずれる
+        //     diff += real_pena - new_pena;
+        //     if (diff < 0) {
+        //       pena += diff;
+        //       best_sol = sol;
+        //       debug("best_sol move:%d turn:%d\n", pena, turn);
+        //     }
+        //   }
       } else if (col == 1 || (type < 0xF && sol.nis[day][c0].size() > 1)) {
         // 順序だけ変える
         // clang-format off
@@ -547,49 +674,7 @@ struct Solver {
         if (diff <= 0) {
           debug("shuffle day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
           sol.hss[day][c0] = new_hs;
-          if (day != 0) {
-            pena_sep[day][c0] = (sol.nis[day][c0].size() + sep_cnt[day - 1][c0][W] - 2) * sol.ws[c0];
-            int y = 0;
-            for (int h : new_hs) {
-              y += h;
-              if (y == W) break;
-              if (sep_cnt[day - 1][c0][y - 1] != sep_cnt[day - 1][c0][y]) {
-                pena_sep[day][c0] -= 2 * sol.ws[c0];
-              }
-            }
-            if (y < W) {
-              pena_sep[day][c0] += sol.ws[c0];
-            }
-            if (next_sep[day - 1][c0][W] == -1) {
-              pena_sep[day][c0] += sol.ws[c0];
-            }
-          }
-          if (day != D - 1) {
-            pena_sep[day + 1][c0] = (sol.nis[day][c0].size() + sep_cnt[day + 1][c0][W] - 2) * sol.ws[c0];
-            int y = 0;
-            for (int h : new_hs) {
-              y += h;
-              if (y == W) break;
-              if (sep_cnt[day + 1][c0][y - 1] != sep_cnt[day + 1][c0][y]) {
-                pena_sep[day + 1][c0] -= 2 * sol.ws[c0];
-              }
-            }
-            if (y < W) {
-              pena_sep[day + 1][c0] += sol.ws[c0];
-            }
-            if (next_sep[day + 1][c0][W] == -1) {
-              pena_sep[day + 1][c0] += sol.ws[c0];
-            }
-          }
-          sort(new_hs.begin(), new_hs.end());
-          pena_area[day][c0] = 0;
-          for (int i = 0; i < sol.nis[day][c0].size(); ++i) {
-            int area_diff = A[day][sol.nis[day][c0][i]] - new_hs[i] * sol.ws[c0];
-            if (area_diff > 0) {
-              pena_area[day][c0] += area_diff * 100;
-            }
-          }
-          set_sep_info(sol.hss[day][c0], sep_cnt[day][c0], prev_sep[day][c0], next_sep[day][c0]);
+          update_col(day, c0);
           int real_pena = pena_sep[day][c0] + pena_sep[day + 1][c0] + pena_area[day][c0];
           // debug("penas: %d %d %d %d %d\n", new_pena, pena_sep[day][c0], pena_sep[day + 1][c0], pena_area[day][c0], real_pena);
           assert((new_pena - real_pena) % 100 == 0); // 面積順ソートで改善することがあるので面積ペナルティのみずれる
@@ -691,90 +776,8 @@ struct Solver {
           debug("move day:%d col:%d w:%d diff:%d n:%lu\n", day, c0, sol.ws[c0], diff, sol.nis[day][c0].size());
           sol.hss[day][c0] = new_hs0;
           sol.hss[day][c1] = new_hs1;
-          if (day != 0) {
-            pena_sep[day][c0] = (sol.nis[day][c0].size() + sep_cnt[day - 1][c0][W] - 2) * sol.ws[c0];
-            pena_sep[day][c1] = (sol.nis[day][c1].size() + sep_cnt[day - 1][c1][W] - 2) * sol.ws[c1];
-            int y = 0;
-            for (int h : new_hs0) {
-              y += h;
-              if (y == W) break;
-              if (sep_cnt[day - 1][c0][y - 1] != sep_cnt[day - 1][c0][y]) {
-                pena_sep[day][c0] -= 2 * sol.ws[c0];
-              }
-            }
-            if (y < W) {
-              pena_sep[day][c0] += sol.ws[c0];
-            }
-            if (next_sep[day - 1][c0][W] == -1) {
-              pena_sep[day][c0] += sol.ws[c0];
-            }
-            y = 0;
-            for (int h : new_hs1) {
-              y += h;
-              if (y == W) break;
-              if (sep_cnt[day - 1][c1][y - 1] != sep_cnt[day - 1][c1][y]) {
-                pena_sep[day][c1] -= 2 * sol.ws[c1];
-              }
-            }
-            if (y < W) {
-              pena_sep[day][c1] += sol.ws[c1];
-            }
-            if (next_sep[day - 1][c1][W] == -1) {
-              pena_sep[day][c1] += sol.ws[c1];
-            }
-          }
-          if (day != D - 1) {
-            pena_sep[day + 1][c0] = (sol.nis[day][c0].size() + sep_cnt[day + 1][c0][W] - 2) * sol.ws[c0];
-            pena_sep[day + 1][c1] = (sol.nis[day][c1].size() + sep_cnt[day + 1][c1][W] - 2) * sol.ws[c1];
-            int y = 0;
-            for (int h : new_hs0) {
-              y += h;
-              if (y == W) break;
-              if (sep_cnt[day + 1][c0][y - 1] != sep_cnt[day + 1][c0][y]) {
-                pena_sep[day + 1][c0] -= 2 * sol.ws[c0];
-              }
-            }
-            if (y < W) {
-              pena_sep[day + 1][c0] += sol.ws[c0];
-            }
-            if (next_sep[day + 1][c0][W] == -1) {
-              pena_sep[day + 1][c0] += sol.ws[c0];
-            }
-            y = 0;
-            for (int h : new_hs1) {
-              y += h;
-              if (y == W) break;
-              if (sep_cnt[day + 1][c1][y - 1] != sep_cnt[day + 1][c1][y]) {
-                pena_sep[day + 1][c1] -= 2 * sol.ws[c1];
-              }
-            }
-            if (y < W) {
-              pena_sep[day + 1][c1] += sol.ws[c1];
-            }
-            if (next_sep[day + 1][c1][W] == -1) {
-              pena_sep[day + 1][c1] += sol.ws[c1];
-            }
-          }
-          sort(new_hs0.begin(), new_hs0.end());
-          sort(new_hs1.begin(), new_hs1.end());
-          sort(sol.nis[day][c0].begin(), sol.nis[day][c0].end());
-          sort(sol.nis[day][c1].begin(), sol.nis[day][c1].end());
-          pena_area[day][c0] = 0;
-          pena_area[day][c1] = 0;
-          for (int i = 0; i < sol.nis[day][c0].size(); ++i) {
-            int area_diff = A[day][sol.nis[day][c0][i]] - new_hs0[i] * sol.ws[c0];
-            if (area_diff > 0) {
-              pena_area[day][c0] += area_diff * 100;
-            }
-          }
-          for (int i = 0; i < sol.nis[day][c1].size(); ++i) {
-            int area_diff = A[day][sol.nis[day][c1][i]] - new_hs1[i] * sol.ws[c1];
-            if (area_diff > 0) {
-              pena_area[day][c1] += area_diff * 100;
-            }
-          }
-          set_sep_info(sol.hss[day][c0], sep_cnt[day][c0], prev_sep[day][c0], next_sep[day][c0]);
-          set_sep_info(sol.hss[day][c1], sep_cnt[day][c1], prev_sep[day][c1], next_sep[day][c1]);
+          update_col(day, c0);
+          update_col(day, c1);
           int real_pena = pena_sep[day][c0] + pena_sep[day + 1][c0] + pena_area[day][c0] + pena_sep[day][c1] + pena_sep[day + 1][c1] +
                           pena_area[day][c1];
           // debug("penas: %d %d %d %d %d\n", new_pena, pena_sep[day][c0], pena_sep[day + 1][c0], pena_area[day][c0], real_pena);
@@ -805,6 +808,10 @@ struct Solver {
     assert(best_sol.pena_area + best_sol.pena_wall == pena);
     return best_sol;
   }
+
+  pair<int, vvi> improve_day(int day, const FixColumnSolution& sol, const vi& sep_cnt_before, const vi& prev_sep_before,
+                             const vi& next_sep_before, const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after,
+                             int threshold) {}
 
   pair<int, vi> improve_col(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
                             const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after, int threshold) {
