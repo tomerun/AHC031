@@ -1,7 +1,7 @@
 OBJ = main.o
 TARGET = main
 # COMPILEOPT = -Wall -Wextra -Wshadow -Wno-sign-compare -std=gnu++17 -O2 -DLOCAL -D_GLIBCXX_DEBUG -g
-COMPILEOPT = -Wall -Wextra -Wshadow -Wno-sign-compare -std=gnu++20 -mtune=native -march=native -fconstexpr-depth=2147483647 -fconstexpr-loop-limit=2147483647 -fconstexpr-ops-limit=2147483647 -O2 -DLOCAL
+COMPILEOPT = -Wall -Wextra -Wshadow -Wno-sign-compare -std=gnu++20 -mtune=native -march=native -fconstexpr-depth=2147483647 -fconstexpr-loop-limit=2147483647 -fconstexpr-ops-limit=2147483647 -O2 -DLOCAL  
 vpath %.cpp ..
 vpath %.h ..
 

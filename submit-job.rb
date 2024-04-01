@@ -30,7 +30,7 @@ result_path = "#{solver_path}/00"
 envs = "environment=[{name=RANGE,value=#{range}},{name=SUBMISSION_ID,value=#{solver_path}},{name=RESULT_PATH,value=#{result_path}}]"
 system('aws', *args, envs, exception: true)
 
-# [3, 4, 5, 6, 7].each do |v|
+# [2, 5, 10, 14, 18, 23].each do |v|
 # 		result_path = sprintf("#{solver_path}/%02d", v)
 # 		envs = "environment=[{name=RANGE,value=#{range}},{name=SUBMISSION_ID,value=#{solver_path}},{name=RESULT_PATH,value=#{result_path}}, {name=X,value=#{v}}]"
 # 		system('aws', *args, envs, exception: true)
