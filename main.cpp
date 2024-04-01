@@ -570,83 +570,6 @@ struct Solver {
             debug("best_sol change_width:%d turn:%d\n", pena, turn);
           }
         }
-        // } else if (type < 0xFFFF) {
-        //   // 1日分割り当て直し
-        //   // clang-format off
-        //   auto [new_pena, new_hss, new_nis] = improve_day(
-        //     day,
-        //     sol,
-        //     day == 0 ? EMPTY_VVI : sep_cnt[day - 1],
-        //     day == 0 ? EMPTY_VVI : prev_sep[day - 1],
-        //     day == 0 ? EMPTY_VVI : next_sep[day - 1],
-        //     day == D - 1 ? EMPTY_VVI : sep_cnt[day + 1],
-        //     day == D - 1 ? EMPTY_VVI : prev_sep[day + 1],
-        //     day == D - 1 ? EMPTY_VVI : next_sep[day + 1],
-        //   );
-        //   // clang-format on
-        //   for (int i = 0; i < col; ++i) {
-        //     diff -= pena_area[day][i];
-        //     diff -= pena_sep[day][i];
-        //     diff -= pena_sep[day + 1][i];
-        //   }
-        //   diff += new_pena;
-        //   debug("diff whole_day:%d %d\n", diff, day);
-        //   if (diff <= 0) {
-        //     sol.hss[day] = new_hss;
-        //     sol.nis[day] = new_nis;
-        //     if (day != 0) {
-        //       pena_sep[day][c0] = (sol.nis[day][c0].size() + sep_cnt[day - 1][c0][W] - 2) * sol.ws[c0];
-        //       int y = 0;
-        //       for (int h : new_hs) {
-        //         y += h;
-        //         if (y == W) break;
-        //         if (sep_cnt[day - 1][c0][y - 1] != sep_cnt[day - 1][c0][y]) {
-        //           pena_sep[day][c0] -= 2 * sol.ws[c0];
-        //         }
-        //       }
-        //       if (y < W) {
-        //         pena_sep[day][c0] += sol.ws[c0];
-        //       }
-        //       if (next_sep[day - 1][c0][W] == -1) {
-        //         pena_sep[day][c0] += sol.ws[c0];
-        //       }
-        //     }
-        //     if (day != D - 1) {
-        //       pena_sep[day + 1][c0] = (sol.nis[day][c0].size() + sep_cnt[day + 1][c0][W] - 2) * sol.ws[c0];
-        //       int y = 0;
-        //       for (int h : new_hs) {
-        //         y += h;
-        //         if (y == W) break;
-        //         if (sep_cnt[day + 1][c0][y - 1] != sep_cnt[day + 1][c0][y]) {
-        //           pena_sep[day + 1][c0] -= 2 * sol.ws[c0];
-        //         }
-        //       }
-        //       if (y < W) {
-        //         pena_sep[day + 1][c0] += sol.ws[c0];
-        //       }
-        //       if (next_sep[day + 1][c0][W] == -1) {
-        //         pena_sep[day + 1][c0] += sol.ws[c0];
-        //       }
-        //     }
-        //     sort(new_hs.begin(), new_hs.end());
-        //     pena_area[day][c0] = 0;
-        //     for (int i = 0; i < sol.nis[day][c0].size(); ++i) {
-        //       int area_diff = A[day][sol.nis[day][c0][i]] - new_hs[i] * sol.ws[c0];
-        //       if (area_diff > 0) {
-        //         pena_area[day][c0] += area_diff * 100;
-        //       }
-        //     }
-        //     set_sep_info(sol.hss[day][c0], sep_cnt[day][c0], prev_sep[day][c0], next_sep[day][c0]);
-        //     int real_pena = pena_sep[day][c0] + pena_sep[day + 1][c0] + pena_area[day][c0];
-        //     // debug("penas: %d %d %d %d %d\n", new_pena, pena_sep[day][c0], pena_sep[day + 1][c0], pena_area[day][c0], real_pena);
-        //     assert((new_pena - real_pena) % 100 == 0); // 面積順ソートで改善することがあるので面積ペナルティのみずれる
-        //     diff += real_pena - new_pena;
-        //     if (diff < 0) {
-        //       pena += diff;
-        //       best_sol = sol;
-        //       debug("best_sol move:%d turn:%d\n", pena, turn);
-        //     }
-        //   }
       } else if (col == 1 || (type < 0xF && sol.nis[day][c0].size() > 1)) {
         // 順序だけ変える
         // clang-format off
@@ -808,10 +731,6 @@ struct Solver {
     assert(best_sol.pena_area + best_sol.pena_wall == pena);
     return best_sol;
   }
-
-  pair<int, vvi> improve_day(int day, const FixColumnSolution& sol, const vi& sep_cnt_before, const vi& prev_sep_before,
-                             const vi& next_sep_before, const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after,
-                             int threshold) {}
 
   pair<int, vi> improve_col(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
                             const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after, int threshold) {
