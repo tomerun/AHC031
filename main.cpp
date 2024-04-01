@@ -576,16 +576,32 @@ struct Solver {
         diff -= pena_area[day][c0];
         diff -= pena_sep[day][c0];
         diff -= pena_sep[day + 1][c0];
-        auto [new_pena, new_hs] = improve_col(
-          day,
-          sol.nis[day][c0],
-          sol.ws[c0],
-          day == 0 ? EMPTY_VI : sep_cnt[day - 1][c0],
-          day == 0 ? EMPTY_VI : prev_sep[day - 1][c0],
-          day == 0 ? EMPTY_VI : next_sep[day - 1][c0],
-          day == D - 1 ? EMPTY_VI : sep_cnt[day + 1][c0],
-          day == D - 1 ? EMPTY_VI : prev_sep[day + 1][c0],
-          day == D - 1 ? EMPTY_VI : next_sep[day + 1][c0],
+        auto [new_pena, new_hs] = day == 0 ? improve_col<true, false>(
+          day, sol.nis[day][c0],  sol.ws[c0],
+          EMPTY_VI,
+          EMPTY_VI,
+          EMPTY_VI,
+          sep_cnt[day + 1][c0],
+          prev_sep[day + 1][c0],
+          next_sep[day + 1][c0],
+          -diff
+        ) : day == D - 1 ? improve_col<false, true>(
+          day, sol.nis[day][c0], sol.ws[c0],
+          sep_cnt[day - 1][c0],
+          prev_sep[day - 1][c0],
+          next_sep[day - 1][c0],
+          EMPTY_VI,
+          EMPTY_VI,
+          EMPTY_VI,
+          -diff
+        ) : improve_col<false, false>(
+          day, sol.nis[day][c0], sol.ws[c0],
+          sep_cnt[day - 1][c0],
+          prev_sep[day - 1][c0],
+          next_sep[day - 1][c0],
+          sep_cnt[day + 1][c0],
+          prev_sep[day + 1][c0],
+          next_sep[day + 1][c0],
           -diff
         );
         // clang-format on
@@ -651,16 +667,32 @@ struct Solver {
         diff -= pena_sep[day][c0];
         diff -= pena_sep[day + 1][c0];
         // clang-format off
-        auto [new_pena0, new_hs0] = improve_col(
-          day,
-          sol.nis[day][c0],
-          sol.ws[c0],
-          day == 0 ? EMPTY_VI : sep_cnt[day - 1][c0],
-          day == 0 ? EMPTY_VI : prev_sep[day - 1][c0],
-          day == 0 ? EMPTY_VI : next_sep[day - 1][c0],
-          day == D - 1 ? EMPTY_VI : sep_cnt[day + 1][c0],
-          day == D - 1 ? EMPTY_VI : prev_sep[day + 1][c0],
-          day == D - 1 ? EMPTY_VI : next_sep[day + 1][c0],
+        auto [new_pena0, new_hs0] = day == 0 ? improve_col<true, false>(
+          day, sol.nis[day][c0],  sol.ws[c0],
+          EMPTY_VI,
+          EMPTY_VI,
+          EMPTY_VI,
+          sep_cnt[day + 1][c0],
+          prev_sep[day + 1][c0],
+          next_sep[day + 1][c0],
+          -diff
+        ) : day == D - 1 ? improve_col<false, true>(
+          day, sol.nis[day][c0], sol.ws[c0],
+          sep_cnt[day - 1][c0],
+          prev_sep[day - 1][c0],
+          next_sep[day - 1][c0],
+          EMPTY_VI,
+          EMPTY_VI,
+          EMPTY_VI,
+          -diff
+        ) : improve_col<false, false>(
+          day, sol.nis[day][c0], sol.ws[c0],
+          sep_cnt[day - 1][c0],
+          prev_sep[day - 1][c0],
+          next_sep[day - 1][c0],
+          sep_cnt[day + 1][c0],
+          prev_sep[day + 1][c0],
+          next_sep[day + 1][c0],
           -diff
         );
         diff += new_pena0;
@@ -676,16 +708,32 @@ struct Solver {
           }
           continue;
         }
-        auto [new_pena1, new_hs1] = improve_col(
-          day,
-          sol.nis[day][c1],
-          sol.ws[c1],
-          day == 0 ? EMPTY_VI : sep_cnt[day - 1][c1],
-          day == 0 ? EMPTY_VI : prev_sep[day - 1][c1],
-          day == 0 ? EMPTY_VI : next_sep[day - 1][c1],
-          day == D - 1 ? EMPTY_VI : sep_cnt[day + 1][c1],
-          day == D - 1 ? EMPTY_VI : prev_sep[day + 1][c1],
-          day == D - 1 ? EMPTY_VI : next_sep[day + 1][c1],
+        auto [new_pena1, new_hs1] = day == 0 ? improve_col<true, false>(
+          day, sol.nis[day][c1],  sol.ws[c1],
+          EMPTY_VI,
+          EMPTY_VI,
+          EMPTY_VI,
+          sep_cnt[day + 1][c1],
+          prev_sep[day + 1][c1],
+          next_sep[day + 1][c1],
+          -diff
+        ) : day == D - 1 ? improve_col<false, true>(
+          day, sol.nis[day][c1], sol.ws[c1],
+          sep_cnt[day - 1][c1],
+          prev_sep[day - 1][c1],
+          next_sep[day - 1][c1],
+          EMPTY_VI,
+          EMPTY_VI,
+          EMPTY_VI,
+          -diff
+        ) : improve_col<false, false>(
+          day, sol.nis[day][c1], sol.ws[c1],
+          sep_cnt[day - 1][c1],
+          prev_sep[day - 1][c1],
+          next_sep[day - 1][c1],
+          sep_cnt[day + 1][c1],
+          prev_sep[day + 1][c1],
+          next_sep[day + 1][c1],
           -diff
         );
         // clang-format on
@@ -732,6 +780,7 @@ struct Solver {
     return best_sol;
   }
 
+  template <bool day0, bool dayD>
   pair<int, vi> improve_col(int day, vi nis, int w, const vi& sep_cnt_before, const vi& prev_sep_before, const vi& next_sep_before,
                             const vi& sep_cnt_after, const vi& prev_sep_after, const vi& next_sep_after, int threshold) {
     if (nis.empty()) {
@@ -741,13 +790,13 @@ struct Solver {
     static vvi dp(N + 1, vi(W + 1, INF));
     static vvi prev(N + 1, vi(W + 1, 0));
     dp[0][0] = 0;
-    if (day != 0) {
+    if (!day0) {
       dp[0][0] += (nis.size() + sep_cnt_before[W] - 1) * w;
       if (next_sep_before[W] == -1) {
         dp[0][0] += w;
       }
     }
-    if (day != D - 1) {
+    if (!dayD) {
       dp[0][0] += (nis.size() + sep_cnt_after[W] - 1) * w;
       if (next_sep_after[W] == -1) {
         dp[0][0] += w;
@@ -759,13 +808,13 @@ struct Solver {
       int a = (ny - cy) * w;
       if (a < na) nv += (na - a) * 100;
       if (ny == W) {
-        if (day != 0) nv -= w;
-        if (day != D - 1) nv -= w;
+        if (!day0) nv -= w;
+        if (!dayD) nv -= w;
       } else {
-        if (day != 0 && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
+        if (!day0 && sep_cnt_before[ny] != sep_cnt_before[ny - 1]) {
           nv -= w * 2;
         }
-        if (day != D - 1 && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
+        if (!dayD && sep_cnt_after[ny] != sep_cnt_after[ny - 1]) {
           nv -= w * 2;
         }
       }
@@ -795,8 +844,8 @@ struct Solver {
         if (jy < W) {
           update_dp(i, y, jy, A[day][ai], next_valid_pos);
           int ny = W;
-          if (day != 0 && next_sep_before[jy] != -1) ny = next_sep_before[jy];
-          if (day != D - 1 && next_sep_after[jy] != -1) ny = min(ny, next_sep_after[jy]);
+          if (!day0 && next_sep_before[jy] != -1) ny = next_sep_before[jy];
+          if (!dayD && next_sep_after[jy] != -1) ny = min(ny, next_sep_after[jy]);
           if (ny != W) update_dp(i, y, ny, A[day][ai], next_valid_pos);
         }
         if (jy != y + 1 && jy - 1 < W) {
@@ -807,8 +856,8 @@ struct Solver {
         }
         jy = min(jy, W);
         int py = 0;
-        if (day != 0) py = prev_sep_before[jy];
-        if (day != D - 1) py = max(py, prev_sep_after[jy]);
+        if (!day0) py = prev_sep_before[jy];
+        if (!dayD) py = max(py, prev_sep_after[jy]);
         if (py > y) {
           update_dp(i, y, py, A[day][ai], next_valid_pos);
         }
@@ -822,7 +871,7 @@ struct Solver {
       return make_pair(ret, vi());
     }
     int best_y = W;
-    if ((day == 0 || next_sep_before[W] == W) && ((day == D - 1 || next_sep_after[W] == W))) {
+    if ((day0 || next_sep_before[W] == W) && ((dayD || next_sep_after[W] == W))) {
       // Wまで使うのが最適でないケースを考慮
       for (int y : valid_pos) {
         if (dp[nis.size()][y] < ret) {
