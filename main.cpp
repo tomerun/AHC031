@@ -477,7 +477,7 @@ struct Solver {
         }
       }
 
-      if ((turn & 0x3FFF) == 0) {
+      if ((turn & 0xFFFF) == 0) {
         for (int day = 0; day < D; ++day) {
           vector<pair<int, int>> as;
           for (int i = 0; i < col; ++i) {
@@ -1357,11 +1357,51 @@ int main() {
   }
   E = 1.0 * (W * W * D - area_sum) / (W * W * D);
   debug("D:%d N:%d E:%.4f\n", D, N, E);
+  int orig_D = D;
+  vi merge_to(D);
+  iota(merge_to.begin(), merge_to.end(), 0);
+  vi actual_days(D);
+  iota(actual_days.begin(), actual_days.end(), 0);
+  while (true) {
+    int min_sum = W * W;
+    int min_i = -1;
+    for (int i = 0; i < actual_days.size() - 1; ++i) {
+      int sum = 0;
+      for (int j = 0; j < N; ++j) {
+        sum += max(A[actual_days[i]][j], A[actual_days[i + 1]][j]);
+      }
+      if (sum < min_sum) {
+        min_sum = sum;
+        min_i = i;
+      }
+    }
+    if (min_sum > W * W * 97 / 100) {
+      break;
+    }
+    debug("merge %d %d %d\n", actual_days[min_i], actual_days[min_i + 1], min_sum);
+    for (int i = 0; i < N; ++i) {
+      A[actual_days[min_i]][i] = max(A[actual_days[min_i]][i], A[actual_days[min_i + 1]][i]);
+    }
+    for (int i = 0; i < orig_D; ++i) {
+      if (merge_to[i] == actual_days[min_i + 1]) {
+        merge_to[i] = actual_days[min_i];
+      }
+    }
+    actual_days.erase(actual_days.begin() + min_i + 1);
+    --D;
+  }
+  for (int i = 0; i < actual_days.size(); ++i) {
+    for (int j = 0; j < N; ++j) {
+      A[i][j] = A[actual_days[i]][j];
+    }
+  }
+  debug_vec(merge_to, "merge_to");
   auto solver = make_unique<Solver>(start_time + tl);
   Result res = solver->solve();
-  for (int i = 0; i < D; ++i) {
+  for (int i = 0; i < orig_D; ++i) {
+    int day = find(actual_days.begin(), actual_days.end(), merge_to[i]) - actual_days.begin();
     for (int j = 0; j < N; ++j) {
-      printf("%d %d %d %d\n", res.rects[i][j].top, res.rects[i][j].left, res.rects[i][j].bottom, res.rects[i][j].right);
+      printf("%d %d %d %d\n", res.rects[day][j].top, res.rects[day][j].left, res.rects[day][j].bottom, res.rects[day][j].right);
     }
   }
   PRINT_TIMER();
