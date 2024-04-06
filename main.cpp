@@ -1303,27 +1303,40 @@ struct Solver {
         }
       }
     }
-    const int col = best_ws.size();
+    int col = best_ws.size();
     for (int t = 0;; ++t) {
       if (get_time() > tl) break;
       vi ws = best_ws;
       int c0 = rnd.next(col);
-      int c1 = rnd.next(col - 1);
-      if (c0 <= c1) c1++;
       if (ws[c0] <= 5) continue;
-      int mv = rnd.next(ws[c0] / 2) + 1;
-      ws[c0] -= mv;
-      ws[c1] += mv;
+      if (ws[c0] < 20 || (rnd.next() & 3)) {
+        int c1 = rnd.next(col - 1);
+        if (c0 <= c1) c1++;
+        int mv = rnd.next(ws[c0] / 2) + 1;
+        ws[c0] -= mv;
+        ws[c1] += mv;
+      } else {
+        int nw = rnd.next(ws[c0] / 2) + 2;
+        ws[c0] -= nw;
+        ws.push_back(nw);
+      }
       int sum_pena_area = 0;
       int sum_pena_wall = 0;
       for (int day = 0; day < D && sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall; ++day) {
         nis[day] = distribute_area(ws, vi(A[day].begin(), A[day].begin() + N));
+        for (const auto& ni : nis[day]) {
+          if (ni.empty()) {
+            sum_pena_area += INF;
+            break;
+          }
+        }
         auto [hs, pena_area, pena_wall] = pack_columns(day, nis[day], ws);
         hss[day] = hs;
         sum_pena_area += pena_area;
         sum_pena_wall += pena_wall;
       }
       if (sum_pena_area + sum_pena_wall < best_pena_area + best_pena_wall) {
+        col = ws.size();
         best_pena_area = sum_pena_area;
         best_pena_wall = sum_pena_wall;
         best_ws = ws;
