@@ -11,7 +11,7 @@ g++ -Wall -Wextra -Wshadow -Wno-sign-compare -std=gnu++20 -mtune=native -march=n
 for (( i = $SEED_START; i < $SEED_END; i++ )); do
 	seed=$(printf "%04d" $i)
 	echo "seed:$seed"
-	TL=10000 ./main < in/"$seed".txt 2> out.txt
+	TL=2000 ./main < in/"$seed".txt 2> out.txt
 	tail -n 1 out.txt >> log.txt
 done
 
